@@ -428,6 +428,91 @@ public partial class MainWindow : Window
         _step = 0;
         RenderFrame();
     }
+    
+    
+    
+    
+    
+	private void Undo_Click(
+		object? sender,
+		global::Avalonia.Interactivity.RoutedEventArgs e)
+	{
+		MoveInHistory(undo: true);
+	}
+
+	private void Redo_Click(
+		object? sender,
+		global::Avalonia.Interactivity.RoutedEventArgs e)
+	{
+		MoveInHistory(undo: false);
+	}
+
+	private void MoveInHistory(bool undo)
+	{
+		if (_loadedProject is null ||
+		    _projectHistory is null)
+		    return;
+
+		// Don't lose edits that haven't been applied yet.
+		if (_hasPendingChanges)
+		{
+		    StatusText.Text =
+		        "Apply your pending changes before Undo/Redo.";
+		    return;
+		}
+
+		try
+		{
+		    bool changed = undo
+		        ? _projectHistory.Undo()
+		        : _projectHistory.Redo();
+
+		    if (!changed)
+		    {
+		        StatusText.Text = undo
+		            ? "Nothing to undo"
+		            : "Nothing to redo";
+		        return;
+		    }
+
+		    // Undo/Redo updates the existing Project model.
+		    // Recreate the GPU simulation using restored values.
+		    LoadSimulation(_loadedProject);
+
+		    // History may replace objects inside collections,
+		    // so rebuild the tree to avoid stale references.
+		    ProjectTreeControl.LoadProject(_loadedProject);
+
+		    PropertiesEditor.SelectedObject = null;
+
+		    // ProjectWatcher also observes Undo/Redo,
+		    // so clear its pending flags afterward.
+		    _hasPendingChanges = false;
+		    _needsSimulationRebuild = false;
+
+		    StatusText.Text = undo
+		        ? "Undo successful"
+		        : "Redo successful";
+		}
+		catch (Exception ex)
+		{
+		    StatusText.Text =
+		        $"History operation failed: {ex.Message}";
+
+		    Console.WriteLine(ex);
+		}
+	}
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
     private void UpdateSimulation()
     {

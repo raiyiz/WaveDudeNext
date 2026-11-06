@@ -44,6 +44,10 @@
                         Click="Reset_Click"/>
                 <Button Content="Apply Changes"
         				Click="ApplyChanges_Click"/>
+        		<Button Content="Undo"
+						Click="Undo_Click"/>
+				<Button Content="Redo"
+						Click="Redo_Click"/>
             </StackPanel>
         </Border>
 
