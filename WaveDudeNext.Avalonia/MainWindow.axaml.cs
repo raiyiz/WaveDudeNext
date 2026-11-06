@@ -8,6 +8,11 @@ using Avalonia.Platform;
 using Avalonia.Threading;
 using WaveDudeNext.Engine;
 
+using Avalonia.Platform.Storage;
+using WaveDudeNext.Model;
+using WaveDudeNext.Runs;
+using WaveDudeNext.Parts;
+
 namespace WaveDudeNext.Avalonia;
 
 
@@ -16,9 +21,9 @@ public partial class MainWindow : Window
     private const int WidthPixels = 256;
     private const int HeightPixels = 256;
 
-    private readonly WaveSimulator _engine;
-    private readonly WriteableBitmap _fieldBitmap;
-    private readonly WriteableBitmap _intensityBitmap;
+    private IWaveEngine _engine;
+	private WriteableBitmap _fieldBitmap;
+	private WriteableBitmap _intensityBitmap;
     private readonly DispatcherTimer _timer;
 
     private int _step;
@@ -64,7 +69,20 @@ public partial class MainWindow : Window
             IntensityScale: 1.0
         );
 
-        _engine = new WaveSimulator(scene, options);
+        _engine = WaveEngineFactory.Create(
+			scene,
+			options,
+			preferGpu: true,
+			emitters: null,
+			out string gpuNote
+		);
+
+		Console.WriteLine($"Engine: {_engine.Description}");
+
+		if (!string.IsNullOrEmpty(gpuNote))
+		{
+			Console.WriteLine(gpuNote);
+		}
 
         var size = new PixelSize(WidthPixels, HeightPixels);
         var dpi = new Vector(96, 96);
@@ -89,6 +107,185 @@ public partial class MainWindow : Window
 
         RenderFrame();
     }
+    
+    
+    
+    
+	private Project? _loadedProject;
+
+	private async void OpenProject_Click(
+		object? sender,
+		global::Avalonia.Interactivity.RoutedEventArgs e)
+	{
+		var files = await StorageProvider.OpenFilePickerAsync(
+		    new FilePickerOpenOptions
+		    {
+		        Title = "Open WaveDudeNext Project",
+		        AllowMultiple = false,
+		        FileTypeFilter =
+		        [
+		            new FilePickerFileType("WaveDudeNext Project")
+		            {
+		                Patterns = ["*.wdproj"]
+		            }
+		        ]
+		    });
+
+		if (files.Count == 0)
+		    return;
+
+		try
+		{
+		    var path = files[0].TryGetLocalPath();
+
+		    if (path is null)
+		        throw new NotSupportedException(
+		            "Only local project files are supported.");
+
+		    _loadedProject = Project.Load(path);
+		    LoadSimulation(_loadedProject);
+
+		    StatusText.Text =
+		        $"Loaded: {System.IO.Path.GetFileName(path)} | " +
+		        $"Scene: {_loadedProject.Scene.Width}x" +
+		        $"{_loadedProject.Scene.Height} | " +
+		        $"Sources: {_loadedProject.Sources.Count} | " +
+		        $"Parts: {_loadedProject.Parts.Count}";
+
+		    Console.WriteLine(
+		        $"Loaded project: {path}");
+		}
+		catch (Exception ex)
+		{
+		    StatusText.Text =
+		        $"Could not load project: {ex.Message}";
+
+		    Console.WriteLine(ex);
+		}
+	}
+	
+	
+	
+	private void LoadSimulation(Project project)
+	{
+		// First milestone: canvas-only projects without optical parts.
+		// Image-based scenes and parts require rasterization.
+		/*
+		if (project.Scene.Mode != SceneMode.Canvas ||
+		    project.Parts.Count > 0)
+		{
+		    throw new NotSupportedException(
+		        "This version supports blank canvas projects " +
+		        "without optical parts.");
+		}
+		
+		*/
+		
+		
+		
+		var paintedScene = PartPainter.Paint(
+			null,
+			project.Scene.Width,
+			project.Scene.Height,
+			project.Scene.RefractiveIndex,
+			project.Parts
+		);
+
+		var spec = RunSpec.Create(
+			project,
+			paintedScene,
+			preferGpu: true,
+			trackIntensity: true
+		);
+
+		SceneData scene = spec.Image is { } image
+			? SceneData.FromBgra(
+				image.Bgra,
+				image.Width,
+				image.Height,
+				image.StrideBytes,
+				spec.ImageSources,
+				spec.DampingEdge,
+				spec.Edges == EdgeMode.Open)
+			: SceneData.Empty(
+				spec.Width,
+				spec.Height,
+				spec.DampingEdge,
+				spec.RefractiveIndex,
+				spec.Edges == EdgeMode.Open);
+
+		
+		/*
+
+		var spec = RunSpec.Create(
+		    project,
+		    image: null,
+		    preferGpu: true,
+		    trackIntensity: true
+		);
+
+		// A blank canvas can use the shared engine's scene builder.
+		var scene = SceneData.Empty(
+		    spec.Width,
+		    spec.Height,
+		    spec.DampingEdge,
+		    spec.RefractiveIndex,
+		    spec.Edges == EdgeMode.Open
+		);
+		
+		*/
+
+		// Preserve source configurations from the project.
+		var newEngine = WaveEngineFactory.Create(
+		    scene,
+		    spec.Engine,
+		    spec.PreferGpu,
+		    spec.Emitters,
+		    out string note
+		);
+
+		// Create the new frame buffers before replacing the old ones.
+		var size = new PixelSize(spec.Width, spec.Height);
+		var dpi = new Vector(96, 96);
+
+		var newFieldBitmap = new WriteableBitmap(
+		    size, dpi, PixelFormats.Bgra8888, AlphaFormat.Opaque);
+
+		var newIntensityBitmap = new WriteableBitmap(
+		    size, dpi, PixelFormats.Bgra8888, AlphaFormat.Opaque);
+
+		_timer.Stop();
+
+		(_engine as IDisposable)?.Dispose();
+		_fieldBitmap.Dispose();
+		_intensityBitmap.Dispose();
+
+		_engine = newEngine;
+		_fieldBitmap = newFieldBitmap;
+		_intensityBitmap = newIntensityBitmap;
+
+		FieldImage.Source = _fieldBitmap;
+		IntensityImage.Source = _intensityBitmap;
+
+		_step = 0;
+
+		Console.WriteLine(
+		    $"Project engine: {_engine.Description}");
+
+		if (!string.IsNullOrEmpty(note))
+		    Console.WriteLine(note);
+
+		RenderFrame();
+	}
+
+
+    
+    
+    
+    
+    
+    
+    
 
     private void Start_Click(object? sender,
         global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -140,7 +337,7 @@ public partial class MainWindow : Window
 	    FieldImage.InvalidateVisual();
 	    IntensityImage.InvalidateVisual();
 
-	    StatusText.Text = $"CPU simulation - Step {_step}";
+	    StatusText.Text = $"{_engine.Description} | Step {_step}";
 	}
 
 
@@ -150,8 +347,8 @@ public partial class MainWindow : Window
         float[] values,
         bool intensity)
     {
-        int width = WidthPixels;
-        int height = HeightPixels;
+        int width = _engine.Width;
+		int height = _engine.Height;
         int stride = _engine.Stride;
         int rim = _engine.Rim;
 
@@ -219,7 +416,7 @@ public partial class MainWindow : Window
         _timer.Stop();
         _fieldBitmap.Dispose();
         _intensityBitmap.Dispose();
-        _engine.Dispose();
+        (_engine as IDisposable)?.Dispose();
         base.OnClosed(e);
     }
 }

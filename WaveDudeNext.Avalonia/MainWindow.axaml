@@ -13,6 +13,7 @@
 
         <StackPanel Orientation="Horizontal"
                     Spacing="8">
+             <Button Content="Open Project" Click="OpenProject_Click"/>
             <Button Content="Start" Click="Start_Click"/>
             <Button Content="Pause" Click="Pause_Click"/>
             <Button Content="Reset" Click="Reset_Click"/>
