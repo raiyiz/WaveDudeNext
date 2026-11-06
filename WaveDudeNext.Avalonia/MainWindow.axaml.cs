@@ -13,6 +13,12 @@ using WaveDudeNext.Model;
 using WaveDudeNext.Runs;
 using WaveDudeNext.Parts;
 
+using System.Reflection;
+using Avalonia.Controls;
+using System.Linq;
+
+
+
 namespace WaveDudeNext.Avalonia;
 
 
@@ -25,12 +31,23 @@ public partial class MainWindow : Window
 	private WriteableBitmap _fieldBitmap;
 	private WriteableBitmap _intensityBitmap;
     private readonly DispatcherTimer _timer;
+    
+    private ProjectWatcher? _projectWatcher;
+	private ProjectHistory? _projectHistory;
+	private bool _hasPendingChanges;
+	private bool _needsSimulationRebuild;
 
     private int _step;
 
     public MainWindow()
     {
         InitializeComponent();
+        
+        
+        ProjectTreeControl.SelectedModelChanged += model =>
+			{
+				PropertiesEditor.SelectedObject = model;
+			};
 
         // Create a simple white-background scene in BGRA format.
         byte[] scenePixels = new byte[
@@ -144,6 +161,14 @@ public partial class MainWindow : Window
 
 		    _loadedProject = Project.Load(path);
 		    LoadSimulation(_loadedProject);
+		    ProjectTreeControl.LoadProject(_loadedProject);
+		    
+		    PropertiesEditor.Project = _loadedProject;
+			PropertiesEditor.SelectedObject = null;
+			
+			AttachProjectTracking(_loadedProject);
+			
+			
 
 		    StatusText.Text =
 		        $"Loaded: {System.IO.Path.GetFileName(path)} | " +
@@ -166,22 +191,107 @@ public partial class MainWindow : Window
 	
 	
 	
+	private void ApplyChanges_Click(
+		object? sender,
+		global::Avalonia.Interactivity.RoutedEventArgs e)
+	{
+		if (_loadedProject is null || !_hasPendingChanges)
+		    return;
+
+		try
+		{
+		    // Save the edited project state as an undo step.
+		    _projectHistory?.Record();
+
+		    if (_needsSimulationRebuild)
+		    {
+		        // Recreates the optical scene and GPU engine.
+		        LoadSimulation(_loadedProject);
+		    }
+
+		    _hasPendingChanges = false;
+		    _needsSimulationRebuild = false;
+
+		    StatusText.Text = "Changes applied";
+		}
+		catch (Exception ex)
+		{
+		    StatusText.Text =
+		        $"Could not apply changes: {ex.Message}";
+
+		    Console.WriteLine(ex);
+		}
+	}
+	
+	
+	private float GetVisibleFieldMaximum()
+	{
+		float maximum = 0f;
+
+		int width = _engine.Width;
+		int height = _engine.Height;
+		int stride = _engine.Stride;
+		int rim = _engine.Rim;
+
+		var data = _engine.FieldData;
+
+		for (int y = 0; y < height; y++)
+		{
+		    for (int x = 0; x < width; x++)
+		    {
+		        int index =
+		            (y + rim + 1) * stride +
+		            x + rim + 1;
+
+		        maximum = MathF.Max(
+		            maximum,
+		            MathF.Abs(data[index]));
+		    }
+		}
+
+		return maximum;
+	}
+
+	
+	
+	
+	
+	private void AttachProjectTracking(Project project)
+	{
+		_projectWatcher?.Dispose();
+
+		_projectWatcher = new ProjectWatcher(project);
+		_projectHistory = new ProjectHistory(project);
+
+		_hasPendingChanges = false;
+		_needsSimulationRebuild = false;
+
+		_projectWatcher.Changed += OnProjectChanged;
+	}
+
+	private void OnProjectChanged(
+		object? sender,
+		ProjectChange change)
+	{
+		_hasPendingChanges = true;
+
+		if (change.AffectsSimulation)
+		    _needsSimulationRebuild = true;
+
+		Console.WriteLine(
+		    $"Changed: {change.Item.GetType().Name}." +
+		    $"{change.Property} | " +
+		    $"{change.OldValueText} -> {change.NewValueText}");
+
+		Console.WriteLine(
+		    $"Simulation rebuild needed: {_needsSimulationRebuild}");
+	}
+
+	
+	
+	
 	private void LoadSimulation(Project project)
 	{
-		// First milestone: canvas-only projects without optical parts.
-		// Image-based scenes and parts require rasterization.
-		/*
-		if (project.Scene.Mode != SceneMode.Canvas ||
-		    project.Parts.Count > 0)
-		{
-		    throw new NotSupportedException(
-		        "This version supports blank canvas projects " +
-		        "without optical parts.");
-		}
-		
-		*/
-		
-		
 		
 		var paintedScene = PartPainter.Paint(
 			null,
@@ -197,7 +307,34 @@ public partial class MainWindow : Window
 			preferGpu: true,
 			trackIntensity: true
 		);
+		
+		Console.WriteLine("=== Simulation diagnostics ===");
 
+		Console.WriteLine(
+			$"Sources in project: {project.Sources.Count}");
+
+		foreach (var source in project.Sources)
+		{
+			Console.WriteLine(
+				$"Source: {source.Name}, Enabled: {source.Enabled}");
+				
+			Console.WriteLine(
+				$"Source: {source.Name}, " +
+				$"Enabled: {source.Enabled}, " +
+				$"Position: ({source.X}, {source.Y})");
+
+		}
+
+		Console.WriteLine(
+			$"Object emitters: {spec.Emitters.Length}");
+
+		Console.WriteLine(
+			$"Image sources enabled: {spec.ImageSources}");
+
+		Console.WriteLine(
+			$"Scene image: {(spec.Image is null ? "null" : "present")}");
+			
+		
 		SceneData scene = spec.Image is { } image
 			? SceneData.FromBgra(
 				image.Bgra,
@@ -213,27 +350,6 @@ public partial class MainWindow : Window
 				spec.DampingEdge,
 				spec.RefractiveIndex,
 				spec.Edges == EdgeMode.Open);
-
-		
-		/*
-
-		var spec = RunSpec.Create(
-		    project,
-		    image: null,
-		    preferGpu: true,
-		    trackIntensity: true
-		);
-
-		// A blank canvas can use the shared engine's scene builder.
-		var scene = SceneData.Empty(
-		    spec.Width,
-		    spec.Height,
-		    spec.DampingEdge,
-		    spec.RefractiveIndex,
-		    spec.Edges == EdgeMode.Open
-		);
-		
-		*/
 
 		// Preserve source configurations from the project.
 		var newEngine = WaveEngineFactory.Create(
@@ -256,16 +372,29 @@ public partial class MainWindow : Window
 
 		_timer.Stop();
 
-		(_engine as IDisposable)?.Dispose();
-		_fieldBitmap.Dispose();
-		_intensityBitmap.Dispose();
+		// Detach old bitmap references from Avalonia.
+		FieldImage.Source = null;
+		IntensityImage.Source = null;
 
+		var oldEngine = _engine;
+		var oldFieldBitmap = _fieldBitmap;
+		var oldIntensityBitmap = _intensityBitmap;
+
+		// Install the new simulation.
 		_engine = newEngine;
 		_fieldBitmap = newFieldBitmap;
 		_intensityBitmap = newIntensityBitmap;
 
 		FieldImage.Source = _fieldBitmap;
 		IntensityImage.Source = _intensityBitmap;
+
+		_step = 0;
+
+		// Release previous resources.
+		(oldEngine as IDisposable)?.Dispose();
+		oldFieldBitmap.Dispose();
+		oldIntensityBitmap.Dispose();
+
 
 		_step = 0;
 
@@ -277,14 +406,6 @@ public partial class MainWindow : Window
 
 		RenderFrame();
 	}
-
-
-    
-    
-    
-    
-    
-    
     
 
     private void Start_Click(object? sender,
@@ -321,12 +442,15 @@ public partial class MainWindow : Window
     }
     
     
-    
+    /*
     private void RenderFrame()
 	{
 	    _engine.PrepareFrame(true, true);
 
 	    DrawPlane(_fieldBitmap, _engine.FieldData, false);
+	    
+	    FieldImage.InvalidateVisual();
+		IntensityImage.InvalidateVisual();
 
 	    if (_engine.IntensityData is { } intensity)
 	    {
@@ -336,8 +460,95 @@ public partial class MainWindow : Window
 	    // Tell Avalonia the images have changed.
 	    FieldImage.InvalidateVisual();
 	    IntensityImage.InvalidateVisual();
+	    
+	    
+	    // Diagnostic: force Avalonia to reattach the updated bitmaps.
+		if (_step % 20 == 0)
+		{
+			FieldImage.Source = null;
+			IntensityImage.Source = null;
+
+			FieldImage.Source = _fieldBitmap;
+			IntensityImage.Source = _intensityBitmap;
+		}
 
 	    StatusText.Text = $"{_engine.Description} | Step {_step}";
+	    
+	    
+		float maxField = 0f;
+
+		foreach (float value in _engine.FieldData)
+		{
+			maxField = MathF.Max(
+				maxField,
+				MathF.Abs(value));
+		}
+
+		StatusText.Text =
+			$"{_engine.Description} | " +
+			$"Step {_step} | " +
+			$"Max field: {maxField:E3}" + 
+			$"Visible max: {GetVisibleFieldMaximum():E3}";
+			
+	}
+*/
+
+
+	
+	private void RenderFrame()
+	{
+		_engine.PrepareFrame(true, true);
+
+		var size = new PixelSize(_engine.Width, _engine.Height);
+		var dpi = new Vector(96, 96);
+
+		var newField = new WriteableBitmap(
+		    size, dpi,
+		    PixelFormats.Bgra8888,
+		    AlphaFormat.Opaque);
+
+		var newIntensity = new WriteableBitmap(
+		    size, dpi,
+		    PixelFormats.Bgra8888,
+		    AlphaFormat.Opaque);
+
+		try
+		{
+		    DrawPlane(newField, _engine.FieldData, false);
+
+		    if (_engine.IntensityData is { } intensity)
+		    {
+		        DrawPlane(newIntensity, intensity, true);
+		    }
+
+		    var oldField = _fieldBitmap;
+		    var oldIntensity = _intensityBitmap;
+
+		    _fieldBitmap = newField;
+		    _intensityBitmap = newIntensity;
+
+		    FieldImage.Source = _fieldBitmap;
+		    IntensityImage.Source = _intensityBitmap;
+
+		    FieldImage.InvalidateVisual();
+		    IntensityImage.InvalidateVisual();
+
+		    oldField.Dispose();
+		    oldIntensity.Dispose();
+		}
+		catch
+		{
+		    newField.Dispose();
+		    newIntensity.Dispose();
+		    throw;
+		}
+
+		float visibleMax = GetVisibleFieldMaximum();
+
+		StatusText.Text =
+		    $"{_engine.Description} | " +
+		    $"Step {_step} | " +
+		    $"Visible max: {visibleMax:E3}";
 	}
 
 
@@ -397,6 +608,35 @@ public partial class MainWindow : Window
                 pixels[dst + 3] = 255;
             }
         }
+        
+        
+        
+		int nonBlackPixels = 0;
+		int maxChannel = 0;
+
+		for (int i = 0; i < pixels.Length; i += 4)
+		{
+			int brightness = Math.Max(
+				pixels[i],
+				Math.Max(pixels[i + 1], pixels[i + 2]));
+
+			if (brightness > 0)
+				nonBlackPixels++;
+
+			maxChannel = Math.Max(maxChannel, brightness);
+		}
+
+		if (_step % 40 == 0)
+		{
+			Console.WriteLine(
+				$"{(intensity ? "Intensity" : "Field")} | " +
+				$"Non-black pixels: {nonBlackPixels} / {width * height} | " +
+				$"Max channel: {maxChannel}");
+		}
+        
+        
+        
+     
 
         using var framebuffer = bitmap.Lock();
 
@@ -417,7 +657,9 @@ public partial class MainWindow : Window
         _fieldBitmap.Dispose();
         _intensityBitmap.Dispose();
         (_engine as IDisposable)?.Dispose();
+        _projectWatcher?.Dispose();
         base.OnClosed(e);
+        
     }
 }
 

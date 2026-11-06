@@ -1,0 +1,21 @@
+
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    x:Class="WaveDudeNext.Avalonia.Panes.ProjectTree">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <Border Background="#292B30"
+                Padding="6">
+            <TextBlock Text="Project"
+                       FontWeight="Bold"/>
+        </Border>
+
+        <TreeView x:Name="ProjectTreeView"
+                  Grid.Row="1"
+                  Margin="4"/>
+
+    </Grid>
+</UserControl>
+

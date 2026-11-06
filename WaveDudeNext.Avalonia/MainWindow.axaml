@@ -1,56 +1,168 @@
 
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:panes="using:WaveDudeNext.Avalonia.Panes"
         x:Class="WaveDudeNext.Avalonia.MainWindow"
         Title="WaveDudeNext - Linux"
-        Width="1100"
-        Height="650"
-        Background="#171B22">
+        Width="1400"
+        Height="900"
+        MinWidth="850"
+        MinHeight="550"
+        Background="#202124">
 
-    <Grid RowDefinitions="Auto,*,Auto"
-          Margin="12"
-          RowSpacing="10">
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
 
-        <StackPanel Orientation="Horizontal"
-                    Spacing="8">
-             <Button Content="Open Project" Click="OpenProject_Click"/>
-            <Button Content="Start" Click="Start_Click"/>
-            <Button Content="Pause" Click="Pause_Click"/>
-            <Button Content="Reset" Click="Reset_Click"/>
-        </StackPanel>
+        <!-- Application menu -->
+        <Menu Grid.Row="0">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open Project..."
+                          Click="OpenProject_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Simulation">
+                <MenuItem Header="_Start"
+                          Click="Start_Click"/>
+                <MenuItem Header="_Pause"
+                          Click="Pause_Click"/>
+                <MenuItem Header="_Reset"
+                          Click="Reset_Click"/>
+            </MenuItem>
+        </Menu>
 
-        <Grid Grid.Row="1"
-              ColumnDefinitions="*,*"
-              ColumnSpacing="10">
+        <!-- Simulation toolbar -->
+        <Border Grid.Row="1"
+                Background="#292B30"
+                Padding="8,5">
+            <StackPanel Orientation="Horizontal"
+                        Spacing="8">
+                <Button Content="Open Project"
+                        Click="OpenProject_Click"/>
+                <Button Content="Start"
+                        Click="Start_Click"/>
+                <Button Content="Pause"
+                        Click="Pause_Click"/>
+                <Button Content="Reset"
+                        Click="Reset_Click"/>
+                <Button Content="Apply Changes"
+        				Click="ApplyChanges_Click"/>
+            </StackPanel>
+        </Border>
 
-            <Border Background="#10151E"
-                    Padding="8">
-                <Grid RowDefinitions="Auto,*">
-                    <TextBlock Text="Wave Field"
-                               Foreground="White"/>
-                    <Image x:Name="FieldImage"
-                           Grid.Row="1"
-                           Stretch="Uniform"/>
-                </Grid>
-            </Border>
+        <!-- Main workspace -->
+        <Grid Grid.Row="2"
+              ColumnDefinitions="300,5,*"
+              Margin="4">
 
-            <Border Grid.Column="1"
-                    Background="#10151E"
-                    Padding="8">
-                <Grid RowDefinitions="Auto,*">
-                    <TextBlock Text="Intensity"
-                               Foreground="White"/>
-                    <Image x:Name="IntensityImage"
-                           Grid.Row="1"
-                           Stretch="Uniform"/>
-                </Grid>
-            </Border>
+            <!-- Left sidebar -->
+            <Grid Grid.Column="0"
+                  RowDefinitions="2*,5,*">
+
+                <!-- Project panel -->
+                <Border Grid.Row="0"
+                        Background="#292B30"
+                        Padding="6">
+                    <Grid RowDefinitions="Auto,*">
+
+                        <TextBlock Text="Project"
+                                   FontWeight="Bold"
+                                   Margin="4,2,4,8"/>
+
+                        <!-- Real tree comes next -->
+                        <panes:ProjectTree
+    						x:Name="ProjectTreeControl"
+    						Grid.Row="1"/>
+                    </Grid>
+                </Border>
+
+                <GridSplitter Grid.Row="1"
+                              Height="5"
+                              ResizeDirection="Rows"
+                              Background="#454850"/>
+
+                <!-- Properties panel -->
+                <Border Grid.Row="2"
+                        Background="#292B30"
+                        Padding="8">
+                    <Grid RowDefinitions="Auto,*">
+
+                        <TextBlock Text="Properties"
+                                   FontWeight="Bold"
+                                   Margin="4,2,4,8"/>
+
+                        <ScrollViewer Grid.Row="1"
+              				VerticalScrollBarVisibility="Auto">
+							<panes:PropertiesPane
+    							x:Name="PropertiesEditor"
+    						Grid.Row="1"/>
+					</ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Resizable sidebar -->
+            <GridSplitter Grid.Column="1"
+                          Width="5"
+                          ResizeDirection="Columns"
+                          Background="#454850"/>
+
+            <!-- Simulation preview -->
+            <Grid Grid.Column="2"
+                  RowDefinitions="*,5,*">
+
+                <!-- Field -->
+                <Border Grid.Row="0"
+                        Background="Black"
+                        Padding="8">
+                    <Grid RowDefinitions="Auto,*">
+
+                        <TextBlock Text="Field"
+                                   Foreground="White"
+                                   Margin="4"/>
+
+                        <Grid Grid.Row="1">
+                            <Image x:Name="FieldImage"
+                                   Stretch="Uniform"
+                                   RenderOptions.BitmapInterpolationMode="None"/>
+
+                            <Image x:Name="GeometryOverlay"
+                                   Stretch="Uniform"
+                                   IsVisible="False"
+                                   IsHitTestVisible="False"/>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <GridSplitter Grid.Row="1"
+                              Height="5"
+                              ResizeDirection="Rows"
+                              Background="#454850"/>
+
+                <!-- Intensity -->
+                <Border Grid.Row="2"
+                        Background="Black"
+                        Padding="8">
+                    <Grid RowDefinitions="Auto,*">
+
+                        <TextBlock Text="Intensity"
+                                   Foreground="White"
+                                   Margin="4"/>
+
+                        <Image x:Name="IntensityImage"
+                               Grid.Row="1"
+                               Stretch="Uniform"
+                               RenderOptions.BitmapInterpolationMode="None"/>
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
 
-        <TextBlock x:Name="StatusText"
-                   Grid.Row="2"
-                   Text="Ready"
-                   Foreground="#AAAAAA"/>
+        <!-- Status bar -->
+        <Border Grid.Row="3"
+                Background="#252A34"
+                Padding="8,5">
+            <TextBlock x:Name="StatusText"
+                       Text="Ready"
+                       Foreground="#C9D5E8"/>
+        </Border>
     </Grid>
 </Window>
 

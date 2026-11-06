@@ -1,0 +1,72 @@
+
+<UserControl
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:WaveDudeNext.Avalonia.Panes"
+    xmlns:model="using:WaveDudeNext.Model"
+    xmlns:views="using:WaveDudeNext.Avalonia.Views"
+    x:Class="WaveDudeNext.Avalonia.Panes.PropertiesPane">
+
+    <UserControl.DataTemplates>
+
+        <DataTemplate DataType="model:Project">
+            <StackPanel Margin="8" Spacing="8">
+                <TextBlock Text="Project"
+                           FontSize="16"
+                           FontWeight="Bold"/>
+                <TextBlock Text="Project settings editor will go here."
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="model:Scene">
+            <StackPanel Margin="8" Spacing="8">
+                <TextBlock Text="Scene"
+                           FontSize="16"
+                           FontWeight="Bold"/>
+                <TextBlock Text="Scene editor will go here."/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="model:Simulation">
+            <StackPanel Margin="8" Spacing="8">
+                <TextBlock Text="Simulation"
+                           FontSize="16"
+                           FontWeight="Bold"/>
+                <TextBlock Text="Simulation editor will go here."/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="model:Source">
+            <StackPanel Margin="8" Spacing="8">
+                <TextBlock Text="Source"
+                           FontSize="16"
+                           FontWeight="Bold"/>
+                <TextBlock Text="{Binding Name}"/>
+                <TextBlock Text="Source editor will go here."/>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="model:FiberPart">
+            <views:FiberPartView/>
+        </DataTemplate>
+
+    </UserControl.DataTemplates>
+
+    <Grid>
+		<ContentControl
+		    Focusable="False"
+		    Content="{Binding SelectedObject,
+		              RelativeSource={RelativeSource
+		              AncestorType=local:PropertiesPane}}"/>
+
+		<TextBlock Text="Select an object in the Project tree."
+		           Margin="8"
+		           Foreground="#999999"
+		           IsVisible="{Binding SelectedObject,
+		                       RelativeSource={RelativeSource
+		                       AncestorType=local:PropertiesPane},
+		                       Converter={x:Static ObjectConverters.IsNull}}"/>
+	</Grid>
+</UserControl>
+

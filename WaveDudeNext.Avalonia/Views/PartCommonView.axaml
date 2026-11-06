@@ -1,0 +1,71 @@
+
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="WaveDudeNext.Avalonia.Views.PartCommonView"
+             x:CompileBindings="False">
+
+    <StackPanel Spacing="10">
+
+        <TextBlock Text="General"
+                   FontWeight="Bold"
+                   FontSize="15"/>
+
+        <Grid ColumnDefinitions="*,120"
+              RowDefinitions="Auto,Auto"
+              ColumnSpacing="8"
+              RowSpacing="8">
+
+            <TextBlock Text="Name"
+                       VerticalAlignment="Center"/>
+
+            <TextBox Grid.Column="1"
+         	Text="{Binding Name, Mode=TwoWay,
+                        UpdateSourceTrigger=LostFocus}"/>
+
+            <TextBlock Grid.Row="1"
+                       Text="Enabled"
+                       VerticalAlignment="Center"/>
+
+            <CheckBox Grid.Row="1"
+          		Grid.Column="1"
+          		IsChecked="{Binding Enabled, Mode=TwoWay}"/>
+        </Grid>
+
+        <TextBlock Text="Position"
+                   FontWeight="Bold"
+                   Margin="0,8,0,0"/>
+
+        <Grid ColumnDefinitions="*,120"
+              RowDefinitions="Auto,Auto,Auto"
+              ColumnSpacing="8"
+              RowSpacing="8">
+
+            <TextBlock Text="X"
+                       VerticalAlignment="Center"/>
+
+            <TextBox Grid.Column="1"
+                     Text="{Binding X, Mode=OneWay}"
+                     IsReadOnly="True"/>
+
+            <TextBlock Grid.Row="1"
+                       Text="Y"
+                       VerticalAlignment="Center"/>
+
+            <TextBox Grid.Row="1"
+                     Grid.Column="1"
+                     Text="{Binding Y, Mode=OneWay}"
+                     IsReadOnly="True"/>
+
+            <TextBlock Grid.Row="2"
+                       Text="Angle"
+                       VerticalAlignment="Center"/>
+
+            <TextBox Grid.Row="2"
+                     Grid.Column="1"
+                     Text="{Binding Angle, Mode=OneWay}"
+                     IsReadOnly="True"/>
+        </Grid>
+
+    </StackPanel>
+</UserControl>
+

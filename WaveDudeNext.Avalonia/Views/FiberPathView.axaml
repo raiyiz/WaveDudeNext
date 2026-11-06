@@ -1,0 +1,86 @@
+
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="WaveDudeNext.Avalonia.Views.FiberPathView"
+             x:CompileBindings="False">
+
+    <StackPanel Spacing="8">
+
+        <TextBlock Text="Fiber Path"
+                   FontSize="15"
+                   FontWeight="Bold"
+                   Margin="0,10,0,0"/>
+
+        <TextBlock Text="Control points and curve handles"
+                   Foreground="#999999"
+                   TextWrapping="Wrap"/>
+
+        <ItemsControl ItemsSource="{Binding Nodes}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border BorderBrush="#454850"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8"
+                            Margin="0,0,0,8">
+
+                        <StackPanel Spacing="6">
+
+                            <CheckBox Content="Smooth"
+                                      IsChecked="{Binding Smooth, Mode=OneWay}"
+                                      IsEnabled="False"/>
+
+                            <Grid ColumnDefinitions="70,*,*"
+                                  RowDefinitions="Auto,Auto,Auto"
+                                  ColumnSpacing="6"
+                                  RowSpacing="6">
+
+                                <TextBlock Text="Point"
+                                           VerticalAlignment="Center"/>
+
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding X, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+
+                                <TextBox Grid.Column="2"
+                                         Text="{Binding Y, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+
+                                <TextBlock Grid.Row="1"
+                                           Text="In"
+                                           VerticalAlignment="Center"/>
+
+                                <TextBox Grid.Row="1"
+                                         Grid.Column="1"
+                                         Text="{Binding InX, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+
+                                <TextBox Grid.Row="1"
+                                         Grid.Column="2"
+                                         Text="{Binding InY, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+
+                                <TextBlock Grid.Row="2"
+                                           Text="Out"
+                                           VerticalAlignment="Center"/>
+
+                                <TextBox Grid.Row="2"
+                                         Grid.Column="1"
+                                         Text="{Binding OutX, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+
+                                <TextBox Grid.Row="2"
+                                         Grid.Column="2"
+                                         Text="{Binding OutY, Mode=OneWay}"
+                                         IsReadOnly="True"/>
+
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+    </StackPanel>
+</UserControl>
+
