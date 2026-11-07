@@ -41,37 +41,36 @@ public partial class MainWindow
     private void CancelExport_Click(object? sender, RoutedEventArgs e) => _exportJob?.Cancel();
     private async void ExportRecording_Click(object? sender, RoutedEventArgs e)
     {
-        if (_exportJob is { IsActive: true }) { StatusText.Text = "An export is already running."; return; }
+        if (_exportJob is { IsActive: true }) { StatusText.Text = UiText.Text("An export is already running."); return; }
         if (_frames is not { Count: > 0 } frames || _loadedProject is not { } project) return;
         _timer.Stop(); _editTimer.Stop(); StopPlayback();
         await _backgroundTask;
         var format = new ComboBox { ItemsSource = ExportFormats.All.Where(f => ExportFormats.IsAvailable(f) || f == ExportFormat.Mp4 && Rendering.FfmpegSink.IsAvailable).ToArray(), SelectedItem = ExportFormat.Png };
-        var layer = new ComboBox { ItemsSource = new[] { "Field", "Intensity" }, SelectedIndex = 0 };
+        var layer = new ComboBox { ItemsSource = new[] { UiText.Text("Field"), UiText.Text("Intensity") }, SelectedIndex = 0 };
         var quality = new NumericUpDown { Minimum = 1, Maximum = 100, Value = 90 };
-        var export = new Button { Content = Controls.IconView.Label("Export", "Export") };
-        var cancel = new Button { Content = Controls.IconView.Label("Exit", "Cancel") };
-        var dialog = new Window { Title = "Export recording", Width = 440, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var export = new Button { Content = Controls.IconView.Label("Export", UiText.Text("Export")) };
+        var cancel = new Button { Content = Controls.IconView.Label("Exit", UiText.Text("Cancel")) };
+        var dialog = new Window { Title = UiText.Text("Export recording"), Width = 440, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
         export.Click += (_, _) => dialog.Close(true); cancel.Click += (_, _) => dialog.Close(false);
         dialog.Content = new StackPanel { Margin = new global::Avalonia.Thickness(16), Spacing = 10, Children =
         {
-            new TextBlock { Text = "Format (PNG/JPEG/OpenEXR write an image sequence)" }, format,
-            new TextBlock { Text = "Layer" }, layer, new TextBlock { Text = "Quality (JPEG/MPEG)" }, quality,
-            new TextBlock { Text = $"Frames {_playIn + 1}–{Math.Min(_playOut ?? frames.Count - 1, frames.Count - 1) + 1}. OpenEXR: Exr stores I; ExrRoot stores √I.", TextWrapping = global::Avalonia.Media.TextWrapping.Wrap },
+            new TextBlock { Text = UiText.Text("Format (PNG/JPEG/OpenEXR write an image sequence)") }, format,
+            new TextBlock { Text = UiText.Text("Layer") }, layer, new TextBlock { Text = UiText.Text("Quality (JPEG/MPEG)") }, quality,
+            new TextBlock { Text = UiText.Format("Frames {0}–{1}. OpenEXR: Exr stores I; ExrRoot stores √I.", _playIn + 1, Math.Min(_playOut ?? TimelineLastFrame, TimelineLastFrame) + 1), TextWrapping = global::Avalonia.Media.TextWrapping.Wrap },
             new StackPanel { Orientation = global::Avalonia.Layout.Orientation.Horizontal, Spacing = 8, Children = { export, cancel } }
         } };
-        if (!await dialog.ShowDialog<bool>(this) || !ReferenceEquals(_frames, frames)) return;
+        if (!await ShowWorkspaceDialog<bool>(dialog) || !ReferenceEquals(_frames, frames)) return;
         var selected = (ExportFormat)format.SelectedItem!;
         string extension = ExportFormats.Extension(selected);
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Export recording", SuggestedFileName = "recording" + extension, DefaultExtension = extension.TrimStart('.'), ShowOverwritePrompt = true,
+            Title = UiText.Text("Export recording"), SuggestedFileName = "recording" + extension, DefaultExtension = extension.TrimStart('.'), ShowOverwritePrompt = true,
             FileTypeChoices = new[] { new FilePickerFileType(selected.ToString()) { Patterns = new[] { "*" + extension } } }
         });
         if (file is null || !ReferenceEquals(_frames, frames)) return;
         FrameStore? generated = null;
         try
         {
-            int frameDivisor = _quality.FrameDivisor;
             if (!_quality.IsFull || selected == ExportFormat.Exr)
             {
                 generated = await PrepareExportFrames(selected != ExportFormat.Exr);
@@ -87,22 +86,22 @@ public partial class MainWindow
                 display.OverlayInExport ? _overlayEdges : null, display.OverlayGain,
                 (frame, pixels) => Rendering.ExportDecoration.Draw(project, generated is null ? _probeTraces : _exportTraces, intensity ? WaveDudeNext.Model.ProbeLayer.Intensity : WaveDudeNext.Model.ProbeLayer.Field,
                     _engine.Width, _engine.Height, frame, Math.Min(frame * _visualizeEvery, _runSteps), _runSteps, pixels));
-            int first = Math.Clamp(_playIn * frameDivisor, 0, frames.Count - 1), last = Math.Clamp(_playOut is { } end ? end * frameDivisor : frames.Count - 1, first, frames.Count - 1);
+            int first = Math.Clamp(_playIn, 0, frames.Count - 1), last = Math.Clamp(_playOut ?? TimelineLastFrame, first, frames.Count - 1);
             int width = _engine.Width, height = _engine.Height, fps = project.Display.Video.Fps, q = (int)(quality.Value ?? 90);
             var target = new ExportTarget(rendering, path, () => selected == ExportFormat.Mp4 && !OperatingSystem.IsWindows() ? new Rendering.FfmpegSink(path, width, height, fps, q) : ExportFormats.Open(selected, path, width, height, fps, q, last - first + 1, first));
             var job = new ExportJob(frames, first, last, new[] { target }, SynchronizationContext.Current);
             _exportJob = job;
             job.PropertyChanged += (_, _) => Dispatcher.UIThread.Post(() => StatusText.Text = $"Export: {job.FramesDone}/{job.FrameCount} ({job.State})");
-            var progress = new Window { Title = "Exporting recording", Width = 420, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-            var progressText = new TextBlock { Text = "Starting export…" };
-            var stop = new Button { Content = Controls.IconView.Label("Exit", "Cancel export") };
+            var progress = new Window { Title = UiText.Text("Exporting recording"), Width = 420, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+            var progressText = new TextBlock { Text = UiText.Text("Starting export…") };
+            var stop = new Button { Content = Controls.IconView.Label("Exit", UiText.Text("Cancel export")) };
             stop.Click += (_, _) => job.Cancel();
             progress.Content = new StackPanel { Margin = new global::Avalonia.Thickness(16), Spacing = 12, Children = { progressText, stop } };
             bool finished = false;
             progress.Closing += (_, args) => { if (!finished) { args.Cancel = true; job.Cancel(); } };
-            job.PropertyChanged += (_, _) => Dispatcher.UIThread.Post(() => progressText.Text = $"{job.FramesDone}/{job.FrameCount} frames ({job.State})");
+            job.PropertyChanged += (_, _) => Dispatcher.UIThread.Post(() => progressText.Text = UiText.Format("{0}/{1} frames ({2})", job.FramesDone, job.FrameCount, job.State));
             job.Start();
-            var shown = progress.ShowDialog(this);
+            var shown = ShowWorkspaceDialog(progress);
             await job.Completion;
             finished = true;
             progress.Close();

@@ -36,16 +36,16 @@ public partial class MainWindow
         var store = FrameStore.Create(Path.Combine(Path.GetTempPath(), "wavedude-export-" + Guid.NewGuid().ToString("N") + ".frames"),
             spec.Shape, spec.Layers, spec.StoredFrameCount, spec.VisualizeEvery, Math.Min(FrameMemory.Budget(10), 512L << 20));
         using var run = new SimulationRun(spec, store, SynchronizationContext.Current);
-        var progress = new Window { Title = title, Width = 440, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var text = new TextBlock { Text = "Simulating at full quality…" };
-        var cancel = new Button { Content = Controls.IconView.Label("Exit", "Cancel") };
+        var progress = new Window { Title = UiText.Text(title), Width = 440, SizeToContent = SizeToContent.Height, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var text = new TextBlock { Text = UiText.Text("Simulating at full quality…") };
+        var cancel = new Button { Content = Controls.IconView.Label("Exit", UiText.Text("Cancel")) };
         cancel.Click += (_, _) => run.Stop();
         bool finished = false;
         progress.Closing += (_, args) => { if (!finished) { args.Cancel = true; run.Stop(); } };
         progress.Content = new StackPanel { Margin = new global::Avalonia.Thickness(16), Spacing = 12, Children = { text, cancel } };
-        run.PropertyChanged += (_, _) => text.Text = $"Step {run.StepsDone}/{run.TotalSteps}";
+        run.PropertyChanged += (_, _) => text.Text = UiText.Format("Step {0}/{1}", run.StepsDone, run.TotalSteps);
         run.Start();
-        var shown = progress.ShowDialog(this);
+        var shown = ShowWorkspaceDialog(progress);
         await run.Completion;
         finished = true; progress.Close(); await shown;
         if (run.Error is { } error) { store.Dispose(); throw error; }
@@ -63,10 +63,12 @@ public partial class MainWindow
             using var store = await PrepareExportFrames(true, "Re-recording probes");
             if (store is null) return;
             _probeTraces.Clear();
-            FieldCanvas.ProfileFrameStride = IntensityCanvas.ProfileFrameStride = _quality.FrameDivisor;
+            FieldCanvas.ProfileFrameStride = IntensityCanvas.ProfileFrameStride = 1;
+            _probeFramesAreFull = true;
             foreach (var pair in _exportTraces) _probeTraces[pair.Key] = pair.Value;
+            ShowStoredFrame(_viewFrame);
             FieldCanvas.InvalidateVisual(); IntensityCanvas.InvalidateVisual();
-            StatusText.Text = "Probe recordings updated; preview frames retained.";
+            StatusText.Text = UiText.Text("Probe recordings updated; preview frames retained.");
         }
         catch (Exception ex) { StatusText.Text = "Probe recording failed: " + ex.Message; }
         finally { _exportTraces.Clear(); }

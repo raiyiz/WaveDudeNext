@@ -42,6 +42,10 @@ public partial class MainWindow
         public double Width { get; set; } = 1500;
         public double Height { get; set; } = 900;
         public Dictionary<string, PanePlacement> Panes { get; set; } = new();
+        public Dictionary<string, int> ProbePaneIds { get; set; } = new();
+        public Docking.DockLayout? DockLayout { get; set; }
+        public Controls.PreviewOverlays FieldOverlays { get; set; } = new();
+        public Controls.PreviewOverlays IntensityOverlays { get; set; } = new();
         public string Quality { get; set; } = "Full";
         public bool TabbedPreviews { get; set; }
         public string Theme { get; set; } = "Dark";
@@ -64,22 +68,18 @@ public partial class MainWindow
     {
         try { if (File.Exists(PreferencesPath)) _desktop = JsonSerializer.Deserialize<DesktopPreferences>(File.ReadAllText(PreferencesPath)) ?? new(); }
         catch (Exception ex) { StatusText.Text = "Could not read workspace settings: " + ex.Message; }
+        _desktop.FieldOverlays ??= new(); _desktop.IntensityOverlays ??= new();
+        _desktop.ProbePaneIds ??= new();
         _desktop.Panes ??= new();
         _desktop.Recent ??= new();
         Width = Math.Clamp(_desktop.Width, MinWidth, 5000);
         Height = Math.Clamp(_desktop.Height, MinHeight, 3000);
-        WorkspaceGrid.ColumnDefinitions[0].Width = new GridLength(Math.Clamp(_desktop.TreeWidth, 140, 800));
-        WorkspaceGrid.ColumnDefinitions[4].Width = new GridLength(Math.Clamp(_desktop.PropertiesWidth, 240, 1000));
         ApplyAppearance();
+        ActualThemeVariantChanged += (_, _) => { if (_desktop.Theme == "Default") ApplyAppearance(); };
         ChooseQuality();
-        if (_desktop.TabbedPreviews) TabbedPreviews_Click(this, new());
+        InitializeDocking();
         RefreshRecent();
-        Opened += (_, _) =>
-        {
-            foreach (var pair in _desktop.Panes.ToArray())
-                if (pair.Value.Floating) FloatPane_Click(new MenuItem { Tag = pair.Key }, new());
-        };
-        Closed += (_, _) => { _desktop.Width = Width; _desktop.Height = Height; _desktop.TreeWidth = WorkspaceGrid.ColumnDefinitions[0].ActualWidth; _desktop.PropertiesWidth = WorkspaceGrid.ColumnDefinitions[4].ActualWidth; SaveDesktop(); };
+        Closed += (_, _) => { _desktop.Width = Width; _desktop.Height = Height; SaveDesktop(); };
     }
     private void SaveDesktop()
     {
@@ -139,7 +139,7 @@ public partial class MainWindow
             string? text = await Clipboard.TryGetTextAsync();
             if (!ReferenceEquals(project, _loadedProject)) return;
             var clip = text is null ? null : ProjectClipboard.Read(text);
-            if (clip is null || !clip.CanPaste(project, _selectedObject)) { StatusText.Text = "The clipboard contains no compatible project objects."; return; }
+            if (clip is null || !clip.CanPaste(project, _selectedObject)) { StatusText.Text = UiText.Text("The clipboard contains no compatible project objects."); return; }
             var pasted = ProjectClipboard.Paste(project, clip, _selectedObject);
             if (pasted.Count > 0) FinishObjectEdit(pasted[^1]);
         }
@@ -149,7 +149,7 @@ public partial class MainWindow
     {
         var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = "Import classic Wave Dude configuration.json", AllowMultiple = false,
+            Title = UiText.Text("Import classic Wave Dude configuration.json"), AllowMultiple = false,
             FileTypeFilter = new[] { new FilePickerFileType("Classic project") { Patterns = new[] { "*.json" } } }
         });
         if (files.Count == 0 || !await ConfirmProjectReplacement()) return;
@@ -166,15 +166,15 @@ public partial class MainWindow
     }
     private Task ShowText(string title, string text)
     {
-        var dialog = new Window { Title = title, Width = 850, Height = 650, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var close = new Button { Content = Controls.IconView.Label("Exit", "Close"), HorizontalAlignment = HorizontalAlignment.Right };
+        var dialog = new Window { Title = UiText.Text(title), Width = 850, Height = 650, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var close = new Button { Content = Controls.IconView.Label("Exit", UiText.Text("Close")), HorizontalAlignment = HorizontalAlignment.Right };
         close.Click += (_, _) => dialog.Close();
         var panel = new DockPanel { Margin = new Thickness(16), LastChildFill = true };
         DockPanel.SetDock(close, Dock.Bottom);
         panel.Children.Add(close);
         panel.Children.Add(new TextBox { Text = text, IsReadOnly = true, AcceptsReturn = true, TextWrapping = global::Avalonia.Media.TextWrapping.Wrap });
         dialog.Content = panel;
-        return dialog.ShowDialog(this);
+        return ShowWorkspaceDialog(dialog);
     }
     private async void Manual_Click(object? sender, RoutedEventArgs e)
     {

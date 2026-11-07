@@ -9,19 +9,19 @@
         <Menu Grid.Row="0">
             <MenuItem Header="{DynamicResource MenuFile}">
                 <MenuItem Header="{DynamicResource MenuFileNew}" Click="NewProject_Click"><MenuItem.Icon><controls:IconView Drawing="New"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="_Open Project…" Click="OpenProject_Click"><MenuItem.Icon><controls:IconView Drawing="Open"/></MenuItem.Icon></MenuItem>
-                <MenuItem x:Name="RecentMenu" Header="Recent projects"/>
-                <MenuItem Header="Import classic project…" Click="ImportClassic_Click"><MenuItem.Icon><controls:IconView Drawing="Open"/></MenuItem.Icon></MenuItem>
-                <MenuItem x:Name="ExamplesMenu" Header="E_xamples"><MenuItem.Icon><controls:IconView Drawing="Open"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.AccessOpenProjectMore}" Click="OpenProject_Click"><MenuItem.Icon><controls:IconView Drawing="Open"/></MenuItem.Icon></MenuItem>
+                <MenuItem x:Name="RecentMenu" Header="{DynamicResource Shell.Recentprojects}"/>
+                <MenuItem Header="{DynamicResource Shell.ImportclassicprojectMore}" Click="ImportClassic_Click"><MenuItem.Icon><controls:IconView Drawing="Open"/></MenuItem.Icon></MenuItem>
+                <MenuItem x:Name="ExamplesMenu" Header="{DynamicResource Shell.AccessExamples}"><MenuItem.Icon><controls:IconView Drawing="Open"/></MenuItem.Icon></MenuItem>
                 <Separator/>
                 <MenuItem Header="{DynamicResource DialogSave}" Click="SaveProject_Click"><MenuItem.Icon><controls:IconView Drawing="Save"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Save _As…" Click="SaveProjectAs_Click"><MenuItem.Icon><controls:IconView Drawing="Save"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.AccessSaveAsMore}" Click="SaveProjectAs_Click"><MenuItem.Icon><controls:IconView Drawing="Save"/></MenuItem.Icon></MenuItem>
                 <Separator/>
-                <MenuItem Header="Export recording…" Click="ExportRecording_Click"><MenuItem.Icon><controls:IconView Drawing="Export"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Cancel export" Click="CancelExport_Click"><MenuItem.Icon><controls:IconView Drawing="Exit"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Export field frame…" Tag="Field" Click="ExportFrame_Click"><MenuItem.Icon><controls:IconView Drawing="Export"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Export intensity frame…" Tag="Intensity" Click="ExportFrame_Click"><MenuItem.Icon><controls:IconView Drawing="Export"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Export selected probe CSV…" Click="ExportProbe_Click"><MenuItem.Icon><controls:IconView Drawing="Export"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.ExportrecordingMore}" Click="ExportRecording_Click"><MenuItem.Icon><controls:IconView Drawing="Export"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Cancelexport}" Click="CancelExport_Click"><MenuItem.Icon><controls:IconView Drawing="Exit"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.ExportfieldframeMore}" Tag="Field" Click="ExportFrame_Click"><MenuItem.Icon><controls:IconView Drawing="Export"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.ExportintensityframeMore}" Tag="Intensity" Click="ExportFrame_Click"><MenuItem.Icon><controls:IconView Drawing="Export"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.ExportselectedprobeCSVMore}" Click="ExportProbe_Click"><MenuItem.Icon><controls:IconView Drawing="Export"/></MenuItem.Icon></MenuItem>
                 <Separator/>
                 <MenuItem Header="{DynamicResource MenuFileExit}" Click="Exit_Click"><MenuItem.Icon><controls:IconView Drawing="Exit"/></MenuItem.Icon></MenuItem>
             </MenuItem>
@@ -35,67 +35,67 @@
                 <MenuItem Header="{DynamicResource MenuProjectDuplicate}" Click="Duplicate_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem>
                 <MenuItem Header="{DynamicResource MenuEditDelete}" Click="Delete_Click"><MenuItem.Icon><controls:IconView Drawing="Delete"/></MenuItem.Icon></MenuItem>
                 <MenuItem Header="{DynamicResource MenuProjectMoveUp}" Tag="-1" Click="MoveObject_Click"><MenuItem.Icon><controls:IconView Drawing="Up"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Move _down" Tag="1" Click="MoveObject_Click"><MenuItem.Icon><controls:IconView Drawing="Down"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.AccessMovedown}" Tag="1" Click="MoveObject_Click"><MenuItem.Icon><controls:IconView Drawing="Down"/></MenuItem.Icon></MenuItem>
             </MenuItem>
-            <MenuItem Header="_Project">
+            <MenuItem Header="{DynamicResource Shell.AccessProject}">
                 <MenuItem Header="{DynamicResource MenuProjectAddSource}" Click="AddSource_Click"><MenuItem.Icon><controls:IconView Drawing="Source"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Add _part"><MenuItem.Icon><controls:IconView Drawing="Part"/></MenuItem.Icon>
-                    <MenuItem Header="Lens / mirror" Tag="LensPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Lens"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="Polygon" Tag="PolygonPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Polygon"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="Rectangle" Tag="RectanglePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Rectangle"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="Ellipse" Tag="EllipsePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Ellipse"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="Triangle" Tag="TrianglePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Triangle"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="Outline" Tag="OutlinePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Outline"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="Fibre" Tag="FiberPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Fiber"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="Bragg reflector" Tag="BraggReflectorPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="BraggReflector"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="GRIN lens" Tag="GrinLensPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="GrinLens"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="Zone plate" Tag="ZonePlatePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="ZonePlate"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="XOR gate" Tag="XorGatePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="XorGate"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="AND gate" Tag="AndGatePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="AndGate"/></MenuItem.Icon></MenuItem>
-                    <MenuItem Header="OR gate" Tag="OrGatePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="OrGate"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.AccessAddpart}"><MenuItem.Icon><controls:IconView Drawing="Part"/></MenuItem.Icon>
+                    <MenuItem Header="{DynamicResource Shell.Lensmirror}" Tag="LensPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Lens"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.Polygon}" Tag="PolygonPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Polygon"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.Rectangle}" Tag="RectanglePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Rectangle"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.Ellipse}" Tag="EllipsePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Ellipse"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.Triangle}" Tag="TrianglePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Triangle"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.Outline}" Tag="OutlinePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Outline"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.Fibre}" Tag="FiberPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="Fiber"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.Braggreflector}" Tag="BraggReflectorPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="BraggReflector"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.GRINlens}" Tag="GrinLensPart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="GrinLens"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.Zoneplate}" Tag="ZonePlatePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="ZonePlate"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.XORgate}" Tag="XorGatePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="XorGate"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.ANDgate}" Tag="AndGatePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="AndGate"/></MenuItem.Icon></MenuItem>
+                    <MenuItem Header="{DynamicResource Shell.ORgate}" Tag="OrGatePart" Click="AddPart_Click"><MenuItem.Icon><controls:IconView Drawing="OrGate"/></MenuItem.Icon></MenuItem>
                 </MenuItem>
-                <MenuItem Header="Add _probe" Click="AddProbe_Click"><MenuItem.Icon><controls:IconView Drawing="Probe"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Add colour scheme" Click="AddScheme_Click"><MenuItem.Icon><controls:IconView Drawing="Palette"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.AccessAddprobe}" Click="AddProbe_Click"><MenuItem.Icon><controls:IconView Drawing="Probe"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Addcolourscheme}" Click="AddScheme_Click"><MenuItem.Icon><controls:IconView Drawing="Palette"/></MenuItem.Icon></MenuItem>
             </MenuItem>
             <MenuItem Header="{DynamicResource MenuSimulation}">
                 <MenuItem Header="{DynamicResource DialogRun}" Click="Start_Click"><MenuItem.Icon><controls:IconView Drawing="Play"/></MenuItem.Icon></MenuItem>
                 <MenuItem Header="{DynamicResource MenuSimulationPause}" Click="Pause_Click"><MenuItem.Icon><controls:IconView Drawing="Pause"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="_Reset" Click="Reset_Click"><MenuItem.Icon><controls:IconView Drawing="Reset"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Re-record probes" Click="RerunProbes_Click"><MenuItem.Icon><controls:IconView Drawing="Probe"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Apply changes" Click="ApplyChanges_Click"><MenuItem.Icon><controls:IconView Drawing="Apply"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.AccessReset}" Click="Reset_Click"><MenuItem.Icon><controls:IconView Drawing="Reset"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Rerecordprobes}" Click="RerunProbes_Click"><MenuItem.Icon><controls:IconView Drawing="Probe"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Applychanges}" Click="ApplyChanges_Click"><MenuItem.Icon><controls:IconView Drawing="Apply"/></MenuItem.Icon></MenuItem>
                 <Separator/>
-                <MenuItem Header="Set playback in point" Click="MarkIn_Click"><MenuItem.Icon><controls:IconView Drawing="First"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Set playback out point" Click="MarkOut_Click"><MenuItem.Icon><controls:IconView Drawing="Last"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Clear playback range" Click="ClearRange_Click"><MenuItem.Icon><controls:IconView Drawing="Reset"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="Play / pause playback" Click="PlayPause_Click"><MenuItem.Icon><controls:IconView Drawing="Play"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Setplaybackinpoint}" Click="MarkIn_Click"><MenuItem.Icon><controls:IconView Drawing="First"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Setplaybackoutpoint}" Click="MarkOut_Click"><MenuItem.Icon><controls:IconView Drawing="Last"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Clearplaybackrange}" Click="ClearRange_Click"><MenuItem.Icon><controls:IconView Drawing="Reset"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Playpauseplayback}" Click="PlayPause_Click"><MenuItem.Icon><controls:IconView Drawing="Play"/></MenuItem.Icon></MenuItem>
             </MenuItem>
             <MenuItem Header="{DynamicResource MenuView}">
-                <MenuItem Header="Preview quality"><MenuItem Header="Automatic" Tag="Auto" Click="PreviewQuality_Click"><MenuItem.Icon><controls:IconView Drawing="PreviewResolution"/></MenuItem.Icon></MenuItem><MenuItem Header="Full (16-bit)" Tag="Full" Click="PreviewQuality_Click"><MenuItem.Icon><controls:IconView Drawing="PreviewResolution"/></MenuItem.Icon></MenuItem><MenuItem Header="Balanced (8-bit)" Tag="Balanced" Click="PreviewQuality_Click"><MenuItem.Icon><controls:IconView Drawing="PreviewResolution"/></MenuItem.Icon></MenuItem><MenuItem Header="Economy (half resolution, alternate frames, 8-bit)" Tag="Economy" Click="PreviewQuality_Click"><MenuItem.Icon><controls:IconView Drawing="PreviewResolution"/></MenuItem.Icon></MenuItem></MenuItem>
-                <MenuItem Header="Panes"><MenuItem Header="Float project tree" Tag="Tree" Click="FloatPane_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="Float properties" Tag="Properties" Click="FloatPane_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="Float field" Tag="Field" Click="FloatPane_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="Float intensity" Tag="Intensity" Click="FloatPane_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="Dock all panes" Click="DockAll_Click"><MenuItem.Icon><controls:IconView Drawing="Apply"/></MenuItem.Icon></MenuItem><MenuItem Header="Tabbed previews" Click="TabbedPreviews_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="Side-by-side previews" Click="SideBySide_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem></MenuItem>
-                <MenuItem Header="Fit previews" Click="FitViews_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem>
-                <MenuItem Header="UI zoom"><MenuItem Header="80%" Tag="0.8" Click="UiZoom_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="100%" Tag="1" Click="UiZoom_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="125%" Tag="1.25" Click="UiZoom_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="150%" Tag="1.5" Click="UiZoom_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem></MenuItem>
-                <MenuItem Header="Theme"><MenuItem Header="{DynamicResource Enum.AppTheme.System}" Tag="Default" Click="Theme_Click"><MenuItem.Icon><controls:IconView Drawing="Palette"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Enum.AppTheme.Dark}" Tag="Dark" Click="Theme_Click"><MenuItem.Icon><controls:IconView Drawing="Palette"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Enum.AppTheme.Light}" Tag="Light" Click="Theme_Click"><MenuItem.Icon><controls:IconView Drawing="Palette"/></MenuItem.Icon></MenuItem></MenuItem>
-                <MenuItem Header="Language"><MenuItem Header="English" Tag="EN" Click="Language_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="Deutsch" Tag="DE" Click="Language_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="Français" Tag="FR" Click="Language_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="Nederlands" Tag="NL" Click="Language_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Previewquality}"><MenuItem Header="{DynamicResource Shell.Automatic}" Tag="Auto" Click="PreviewQuality_Click"><MenuItem.Icon><controls:IconView Drawing="PreviewResolution"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Full16bit}" Tag="Full" Click="PreviewQuality_Click"><MenuItem.Icon><controls:IconView Drawing="PreviewResolution"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Balanced8bit}" Tag="Balanced" Click="PreviewQuality_Click"><MenuItem.Icon><controls:IconView Drawing="PreviewResolution"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Economyhalfresolutionalternateframes8bit}" Tag="Economy" Click="PreviewQuality_Click"><MenuItem.Icon><controls:IconView Drawing="PreviewResolution"/></MenuItem.Icon></MenuItem></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Panes}"><MenuItem Header="{DynamicResource Shell.Showprojecttree}" Tag="Tree" Click="ShowPane_Click"/><MenuItem Header="{DynamicResource Shell.Showproperties}" Tag="Properties" Click="ShowPane_Click"/><MenuItem Header="{DynamicResource Shell.Showfield}" Tag="Field" Click="ShowPane_Click"/><MenuItem Header="{DynamicResource Shell.Showintensity}" Tag="Intensity" Click="ShowPane_Click"/><MenuItem x:Name="ProbePanesMenu" Header="{DynamicResource Shell.Probeviewports}"/><MenuItem Header="{DynamicResource Shell.Resetlayout}" Click="ResetLayout_Click"/><MenuItem Header="{DynamicResource Shell.Floatprojecttree}" Tag="Tree" Click="FloatPane_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Floatproperties}" Tag="Properties" Click="FloatPane_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Floatfield}" Tag="Field" Click="FloatPane_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Floatintensity}" Tag="Intensity" Click="FloatPane_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Dockallpanes}" Click="DockAll_Click"><MenuItem.Icon><controls:IconView Drawing="Apply"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Tabbedpreviews}" Click="TabbedPreviews_Click"><MenuItem.Icon><controls:IconView Drawing="Duplicate"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Sidebysidepreviews}" Click="SideBySide_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Fitpreviews}" Click="FitViews_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.UIzoom}"><MenuItem Header="{DynamicResource Shell.80}" Tag="0.8" Click="UiZoom_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.100}" Tag="1" Click="UiZoom_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.125}" Tag="1.25" Click="UiZoom_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.150}" Tag="1.5" Click="UiZoom_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Theme}"><MenuItem Header="{DynamicResource Enum.AppTheme.System}" Tag="Default" Click="Theme_Click"><MenuItem.Icon><controls:IconView Drawing="Palette"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Enum.AppTheme.Dark}" Tag="Dark" Click="Theme_Click"><MenuItem.Icon><controls:IconView Drawing="Palette"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Enum.AppTheme.Light}" Tag="Light" Click="Theme_Click"><MenuItem.Icon><controls:IconView Drawing="Palette"/></MenuItem.Icon></MenuItem></MenuItem>
+                <MenuItem Header="{DynamicResource Shell.Language}"><MenuItem Header="{DynamicResource Shell.English}" Tag="EN" Click="Language_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Deutsch}" Tag="DE" Click="Language_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Français}" Tag="FR" Click="Language_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.Nederlands}" Tag="NL" Click="Language_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem></MenuItem>
             </MenuItem>
-            <MenuItem Header="{DynamicResource MenuHelp}"><MenuItem Header="{DynamicResource MenuHelpManual}" Click="Manual_Click"><MenuItem.Icon><controls:IconView Drawing="Open"/></MenuItem.Icon></MenuItem><MenuItem Header="_About / diagnostics" Click="Diagnostics_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem></MenuItem>
+            <MenuItem Header="{DynamicResource MenuHelp}"><MenuItem Header="{DynamicResource MenuHelpManual}" Click="Manual_Click"><MenuItem.Icon><controls:IconView Drawing="Open"/></MenuItem.Icon></MenuItem><MenuItem Header="{DynamicResource Shell.AccessAboutdiagnostics}" Click="Diagnostics_Click"><MenuItem.Icon><controls:IconView Drawing="Project"/></MenuItem.Icon></MenuItem></MenuItem>
         </Menu>
         <Border Grid.Row="1" Background="{DynamicResource WorkspaceHeader}" BorderBrush="{DynamicResource WorkspaceBorder}" BorderThickness="0,1,0,1" Padding="6,4">
             <StackPanel Orientation="Horizontal" Spacing="5">
-                <Button Click="NewProject_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="New"/><TextBlock Text="New"/></StackPanel></Button>
-                <Button Click="OpenProject_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Open"/><TextBlock Text="Open"/></StackPanel></Button>
-                <Button Click="SaveProject_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Save"/><TextBlock Text="Save"/></StackPanel></Button>
+                <Button Click="NewProject_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="New"/><TextBlock Text="{DynamicResource Shell.New}"/></StackPanel></Button>
+                <Button Click="OpenProject_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Open"/><TextBlock Text="{DynamicResource Shell.Open}"/></StackPanel></Button>
+                <Button Click="SaveProject_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Save"/><TextBlock Text="{DynamicResource Shell.Save}"/></StackPanel></Button>
                 <Separator Width="8"/>
-                <Button Click="Start_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Play"/><TextBlock Text="Run"/></StackPanel></Button>
-                <Button Click="Pause_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Pause"/><TextBlock Text="Pause"/></StackPanel></Button>
-                <Button Click="Reset_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Reset"/><TextBlock Text="Reset"/></StackPanel></Button>
-                <Button Click="ApplyChanges_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Apply"/><TextBlock Text="Apply"/></StackPanel></Button>
-                <Button Click="Undo_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Undo"/><TextBlock Text="Undo"/></StackPanel></Button>
-                <Button Click="Redo_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Redo"/><TextBlock Text="Redo"/></StackPanel></Button>
+                <Button Click="Start_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Play"/><TextBlock Text="{DynamicResource Shell.Run}"/></StackPanel></Button>
+                <Button Click="Pause_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Pause"/><TextBlock Text="{DynamicResource Shell.Pause}"/></StackPanel></Button>
+                <Button Click="Reset_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Reset"/><TextBlock Text="{DynamicResource Shell.Reset}"/></StackPanel></Button>
+                <Button Click="ApplyChanges_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Apply"/><TextBlock Text="{DynamicResource Shell.Apply}"/></StackPanel></Button>
+                <Button Click="Undo_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Undo"/><TextBlock Text="{DynamicResource Shell.Undo}"/></StackPanel></Button>
+                <Button Click="Redo_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Redo"/><TextBlock Text="{DynamicResource Shell.Redo}"/></StackPanel></Button>
                 <Separator Width="8"/>
-                <Button Click="AddSource_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Source" PlusBadge="True"/><TextBlock Text="Source"/></StackPanel></Button>
-                <Button Tag="LensPart" Click="AddPart_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Lens" PlusBadge="True"/><TextBlock Text="Lens"/></StackPanel></Button>
-                <Button Click="AddProbe_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Probe" PlusBadge="True"/><TextBlock Text="Probe"/></StackPanel></Button>
-                <CheckBox x:Name="AutoApply" Content="Auto rerun" IsChecked="True" Margin="8,0,0,0"/>
+                <Button Click="AddSource_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Source" PlusBadge="True"/><TextBlock Text="{DynamicResource Shell.Source}"/></StackPanel></Button>
+                <Button Tag="LensPart" Click="AddPart_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Lens" PlusBadge="True"/><TextBlock Text="{DynamicResource Shell.Lens}"/></StackPanel></Button>
+                <Button Click="AddProbe_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Probe" PlusBadge="True"/><TextBlock Text="{DynamicResource Shell.Probe}"/></StackPanel></Button>
+                <CheckBox x:Name="AutoApply" Content="{DynamicResource Shell.Autorerun}" IsChecked="True" Margin="8,0,0,0"/>
             </StackPanel>
         </Border>
         <Grid x:Name="WorkspaceGrid" Grid.Row="2" ColumnDefinitions="240,5,*,5,340" Margin="4">
@@ -106,9 +106,9 @@
             <Grid x:Name="PreviewGrid" Grid.Column="2" ColumnDefinitions="*,5,*">
                 <Border x:Name="FieldHost" Grid.Column="0" Background="{DynamicResource WorkspaceCanvas}" BorderBrush="{DynamicResource WorkspaceBorder}" BorderThickness="1">
                     <Grid RowDefinitions="Auto,*">
-                        <Border Background="{DynamicResource WorkspaceBackground}" Padding="6,4"><TextBlock Text="Field" FontWeight="SemiBold"/></Border>
+                        <Border Background="{DynamicResource WorkspaceBackground}" Padding="6,4"><TextBlock Text="{DynamicResource Shell.Field}" FontWeight="SemiBold"/></Border>
                         <Grid Grid.Row="1" ClipToBounds="True">
-                            <Image x:Name="FieldImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+                            <Image x:Name="FieldImage" AutomationProperties.AccessibilityView="Raw" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
                             <controls:SceneCanvas x:Name="FieldCanvas"/>
                         </Grid>
                     </Grid>
@@ -116,9 +116,9 @@
                 <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" Background="{DynamicResource WorkspaceBorder}"/>
                 <Border x:Name="IntensityHost" Grid.Column="2" Background="{DynamicResource WorkspaceCanvas}" BorderBrush="{DynamicResource WorkspaceBorder}" BorderThickness="1">
                     <Grid RowDefinitions="Auto,*">
-                        <Border Background="{DynamicResource WorkspaceBackground}" Padding="6,4"><TextBlock Text="Intensity" FontWeight="SemiBold"/></Border>
+                        <Border Background="{DynamicResource WorkspaceBackground}" Padding="6,4"><TextBlock Text="{DynamicResource Shell.Intensity}" FontWeight="SemiBold"/></Border>
                         <Grid Grid.Row="1" ClipToBounds="True">
-                            <Image x:Name="IntensityImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+                            <Image x:Name="IntensityImage" AutomationProperties.AccessibilityView="Raw" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
                             <controls:SceneCanvas x:Name="IntensityCanvas"/>
                         </Grid>
                     </Grid>
@@ -127,7 +127,7 @@
             <GridSplitter Grid.Column="3" Width="5" ResizeDirection="Columns" Background="{DynamicResource WorkspaceBorder}"/>
             <Border x:Name="PropertiesHost" Grid.Column="4" Background="{DynamicResource WorkspacePane}" BorderBrush="{DynamicResource WorkspaceBorder}" BorderThickness="1">
                 <Grid RowDefinitions="Auto,*">
-                    <Border Background="{DynamicResource WorkspaceBackground}" Padding="6,4"><TextBlock Text="Properties" FontWeight="SemiBold"/></Border>
+                    <Border Background="{DynamicResource WorkspaceBackground}" Padding="6,4"><TextBlock Text="{DynamicResource Shell.Properties}" FontWeight="SemiBold"/></Border>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <panes:PropertiesPane x:Name="PropertiesEditor"/>
                     </ScrollViewer>
@@ -137,23 +137,23 @@
         <Border Grid.Row="3" Background="{DynamicResource WorkspacePane}" Padding="8,5" BorderBrush="{DynamicResource WorkspaceBorder}" BorderThickness="0,1,0,0">
             <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Button ToolTip.Tip="First frame" AutomationProperties.Name="First frame" Tag="First" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="First"/></StackPanel></Button>
-                    <Button ToolTip.Tip="Previous frame" AutomationProperties.Name="Previous frame" Tag="Previous" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Previous"/></StackPanel></Button>
-                    <Button x:Name="PlayButton" Click="PlayPause_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Play"/><TextBlock Text="Play"/></StackPanel></Button>
-                    <Button ToolTip.Tip="Next frame" AutomationProperties.Name="Next frame" Tag="Next" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Next"/></StackPanel></Button>
-                    <Button ToolTip.Tip="Last frame" AutomationProperties.Name="Last frame" Tag="Last" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Last"/></StackPanel></Button>
+                    <Button ToolTip.Tip="{DynamicResource Shell.Firstframe}" AutomationProperties.Name="{DynamicResource Shell.Firstframe}" Tag="First" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="First"/></StackPanel></Button>
+                    <Button ToolTip.Tip="{DynamicResource Shell.Previousframe}" AutomationProperties.Name="{DynamicResource Shell.Previousframe}" Tag="Previous" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Previous"/></StackPanel></Button>
+                    <Button x:Name="PlayButton" Click="PlayPause_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Play"/><TextBlock Text="{DynamicResource Shell.Play}"/></StackPanel></Button>
+                    <Button ToolTip.Tip="{DynamicResource Shell.Nextframe}" AutomationProperties.Name="{DynamicResource Shell.Nextframe}" Tag="Next" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Next"/></StackPanel></Button>
+                    <Button ToolTip.Tip="{DynamicResource Shell.Lastframe}" AutomationProperties.Name="{DynamicResource Shell.Lastframe}" Tag="Last" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Last"/></StackPanel></Button>
                 </StackPanel>
-                <Slider x:Name="TimelineSlider" Grid.Column="1" Minimum="0" Maximum="0" Value="0" Margin="12,0" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Timeline_Changed"/>
+                <Slider x:Name="TimelineSlider" AutomationProperties.Name="{DynamicResource Shell.Frametimeline}" Grid.Column="1" Minimum="0" Maximum="0" Value="0" Margin="12,0" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Timeline_Changed"/>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                    <CheckBox x:Name="LoopPlayback" Content="Loop"/>
-                    <TextBlock Text="Speed" VerticalAlignment="Center"/>
-                    <NumericUpDown x:Name="PlaybackSpeed" Value="1" Minimum="0.1" Maximum="8" Increment="0.1" Width="85"/>
+                    <CheckBox x:Name="LoopPlayback" Content="{DynamicResource Shell.Loop}"/>
+                    <TextBlock Text="{DynamicResource Shell.Speed}" VerticalAlignment="Center"/>
+                    <NumericUpDown x:Name="PlaybackSpeed" AutomationProperties.Name="{DynamicResource Shell.Playbackspeed}" Value="1" Minimum="0.1" Maximum="8" Increment="0.1" Width="85"/>
                 </StackPanel>
-                <TextBlock x:Name="FrameText" Grid.Row="1" Grid.ColumnSpan="3" Text="Frame 0" Foreground="{DynamicResource WorkspaceMuted}" Margin="0,3,0,0"/>
+                <TextBlock x:Name="FrameText" Grid.Row="1" Grid.ColumnSpan="3" Text="{DynamicResource Shell.Frame0}" Foreground="{DynamicResource WorkspaceMuted}" Margin="0,3,0,0"/>
             </Grid>
         </Border>
         <Border Grid.Row="4" Background="#007ACC" Padding="8,4">
-            <TextBlock x:Name="StatusText" Text="Ready" Foreground="White"/>
+            <TextBlock x:Name="StatusText" AutomationProperties.LiveSetting="Polite" Text="{DynamicResource Shell.Ready}" Foreground="White"/>
         </Border>
     </Grid></LayoutTransformControl>
 </Window>

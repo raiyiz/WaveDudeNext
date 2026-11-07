@@ -6,8 +6,27 @@
 
     <Application.Resources>
         <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="WindowForeground" Color="#F1F1F1"/>
+                    <SolidColorBrush x:Key="GrayText" Color="#999999"/>
+                    <SolidColorBrush x:Key="ControlBorder" Color="#3F3F46"/>
+                    <SolidColorBrush x:Key="ToolWindowBackground" Color="#252526"/>
+                    <SolidColorBrush x:Key="TextBoxBackground" Color="#333337"/>
+                    <SolidColorBrush x:Key="TextBoxBorder" Color="#3F3F46"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="WindowForeground" Color="#202020"/>
+                    <SolidColorBrush x:Key="GrayText" Color="#666666"/>
+                    <SolidColorBrush x:Key="ControlBorder" Color="#BFBFBF"/>
+                    <SolidColorBrush x:Key="ToolWindowBackground" Color="#FAFAFA"/>
+                    <SolidColorBrush x:Key="TextBoxBackground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="TextBoxBorder" Color="#BFBFBF"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="/Styles/Strings.EN.axaml"/>
+                <ResourceInclude Source="/Styles/Strings.Shell.EN.axaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

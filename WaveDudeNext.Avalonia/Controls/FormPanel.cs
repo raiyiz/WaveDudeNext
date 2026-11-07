@@ -19,6 +19,9 @@ using System;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Automation;
+using Avalonia.LogicalTree;
+using System.Linq;
 
 namespace WaveDudeNext.Avalonia.Controls;
 
@@ -104,6 +107,12 @@ public sealed class FormPanel : Panel
 			{
 				if (editor != null)
 				{
+                    if (label is not null)
+                    {
+                        foreach (var input in editor.GetLogicalDescendants().OfType<Control>().Prepend(editor)
+                            .Where(control => control is TextBox or NumericUpDown or ComboBox or Slider))
+                            if (AutomationProperties.GetLabeledBy(input) is null) AutomationProperties.SetLabeledBy(input, label);
+                    }
 					editor.Measure(new Size(editorWidth, double.PositiveInfinity));
 					rowHeight = editor.DesiredSize.Height;
 					width = Math.Max(width, labelWidth + ColumnSpacing + editor.DesiredSize.Width);

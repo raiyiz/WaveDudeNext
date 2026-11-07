@@ -66,7 +66,7 @@ public partial class MainWindow
         {
             if (_frames is null || _frames.Count == 0) return;
             int next = _viewFrame + 1;
-            if (next > Math.Min(_playOut ?? _frames.Count - 1, _frames.Count - 1))
+            if (next > Math.Min(_playOut ?? TimelineLastFrame, TimelineLastFrame))
             {
                 if (LoopPlayback.IsChecked == true) next = _playIn;
                 else { StopPlayback(); return; }
@@ -149,6 +149,7 @@ public partial class MainWindow
         ProjectTreeControl.LoadProject(project);
         SelectObject(null);
         AttachProjectTracking(project);
+        SynchronizeProbeViewports();
         Title = "WaveDude Next — " + (path is null ? "Untitled" : Path.GetFileNameWithoutExtension(path));
     }
 
@@ -273,6 +274,7 @@ public partial class MainWindow
         FieldCanvas.Layer = ProbeLayer.Field;
         IntensityCanvas.Layer = ProbeLayer.Intensity;
         _lastCapturedStep = -1;
+        _capturedSteps.Clear(); _followSimulation = true; _probeFramesAreFull = false;
         _viewFrame = 0;
         _fieldLut = _intensityLut = null;
         _settingTimeline = true;
@@ -293,22 +295,23 @@ public partial class MainWindow
         _probeCollector?.CollectProfiles(_engine, _step);
         _probeCollector?.TakeForUi();
         _lastCapturedStep = _step;
+        _capturedSteps.Add(_step);
         _settingTimeline = true;
-        TimelineSlider.Maximum = _frames.Count - 1;
+        TimelineSlider.Maximum = TimelineLastFrame;
         _settingTimeline = false;
     }
     private void RenderFrame()
     {
         CaptureFrame();
-        ShowStoredFrame((_frames?.Count ?? 1) - 1);
+        ShowStoredFrame(_followSimulation ? TimelineLastFrame : _viewFrame);
         StatusText.Text = $"{_engine.Description} | {_engine.Width} × {_engine.Height} | Step {_step} / {_runSteps}";
     }
     private void ShowStoredFrame(int frame)
     {
         if (_frames is not { Count: > 0 } frames || _previewProject is not { } project) return;
-        _viewFrame = Math.Clamp(frame, 0, frames.Count - 1);
-        FieldCanvas.Frame = IntensityCanvas.Frame = _viewFrame;
-        FieldCanvas.Step = IntensityCanvas.Step = Math.Min(_viewFrame * StoredEvery, _runSteps);
+        _viewFrame = Math.Clamp(frame, 0, TimelineLastFrame);
+        FieldCanvas.Frame = IntensityCanvas.Frame = _probeFramesAreFull ? _viewFrame : StoredFrameForTimeline(_viewFrame);
+        FieldCanvas.Step = IntensityCanvas.Step = TimelineStep(_viewFrame);
         FieldCanvas.TotalSteps = IntensityCanvas.TotalSteps = _runSteps;
         DrawStoredPlane(_fieldBitmap, FrameLayer.Field, project.Display.Field, ref _fieldLut);
         DrawStoredPlane(_intensityBitmap, FrameLayer.Intensity, project.Display.Intensity, ref _intensityLut);
@@ -316,16 +319,17 @@ public partial class MainWindow
         IntensityImage.InvalidateVisual();
         FieldCanvas.InvalidateVisual();
         IntensityCanvas.InvalidateVisual();
+        SynchronizeProbeViewports();
         _settingTimeline = true;
         TimelineSlider.Value = _viewFrame;
         _settingTimeline = false;
-        FrameText.Text = $"Frame {_viewFrame + 1} / {frames.Count}  ·  {frames.Width} × {frames.Height}, {(_quality.Format == WaveDudeNext.Engine.FrameFormat.Index ? "8-bit" : "16-bit")}  ·  RAM {frames.FramesInMemory}, disk {frames.FramesOnDisk}{(frames.RamFrames < frames.Capacity ? " (disk cache required)" : "")}  ·  Step {Math.Min(_viewFrame * StoredEvery, _runSteps)}";
+        FrameText.Text = $"Frame {_viewFrame + 1} / {TimelineLastFrame + 1}  ·  stored {frames.Count}  ·  {frames.Width} × {frames.Height}, {(_quality.Format == WaveDudeNext.Engine.FrameFormat.Index ? "8-bit" : "16-bit")}  ·  RAM {frames.FramesInMemory}, disk {frames.FramesOnDisk}{(frames.RamFrames < frames.Capacity ? " (disk cache required)" : "")}  ·  Step {TimelineStep(_viewFrame)}";
     }
     private void DrawStoredPlane(WriteableBitmap bitmap, FrameLayer layer, DisplayLayer display, ref ColorLut? lut)
     {
         if (_frames is null) return;
-        if (_frames.Format == WaveDudeNext.Engine.FrameFormat.Index) { if (!_frames.CopyLayer(_viewFrame, layer, _indices.AsSpan())) return; }
-        else if (!_frames.CopyLayer(_viewFrame, layer, _samples.AsSpan())) return;
+        if (_frames.Format == WaveDudeNext.Engine.FrameFormat.Index) { if (!_frames.CopyLayer(StoredFrameForTimeline(_viewFrame), layer, _indices.AsSpan())) return; }
+        else if (!_frames.CopyLayer(StoredFrameForTimeline(_viewFrame), layer, _samples.AsSpan())) return;
         if (lut is null)
         {
             var scheme = ColorSchemeStore.Find(_previewProject!.ColorSchemes, display.ColorScheme)
@@ -335,7 +339,8 @@ public partial class MainWindow
         if (_frames.Format == WaveDudeNext.Engine.FrameFormat.Index) FrameRenderer.RenderIndexed(_indices, _frames.Width, _frames.Height, lut, _pixels);
         else FrameRenderer.Render(_samples, _frames.Width, _frames.Height, lut,
             ((IFrameSource)_frames).KindOf(layer), (float)display.Brightness, _pixels);
-        if (display.Overlay && PreviewEdges() is { } edges)
+        var overlays = layer == FrameLayer.Field ? FieldCanvas.Overlays : IntensityCanvas.Overlays;
+        if (overlays.Drawings && overlays.Edges && display.Overlay && PreviewEdges() is { } edges)
             GlowingEdges.BlendAdditive(_pixels, _frames.Width, _frames.Height, edges, display.OverlayGain);
         using var target = bitmap.Lock();
         for (int y = 0; y < _frames.Height; y++)
@@ -344,17 +349,17 @@ public partial class MainWindow
     private void Timeline_Changed(object? sender, RangeBaseValueChangedEventArgs e)
     {
         if (_settingTimeline || _frames is null) return;
-        _timer.Stop();
+        _timer.Stop(); _followSimulation = false;
         ShowStoredFrame((int)Math.Round(e.NewValue));
     }
     private void Seek_Click(object? sender, RoutedEventArgs e)
     {
         if (_frames is null) return;
         _timer.Stop();
-        StopPlayback();
+        StopPlayback(); _followSimulation = false;
         int frame = (sender as Control)?.Tag?.ToString() switch
         {
-            "First" => 0, "Previous" => _viewFrame - 1, "Next" => _viewFrame + 1, _ => _frames.Count - 1
+            "First" => 0, "Previous" => _viewFrame - 1, "Next" => _viewFrame + 1, _ => TimelineLastFrame
         };
         ShowStoredFrame(frame);
     }
@@ -362,17 +367,17 @@ public partial class MainWindow
     {
         if (_playbackTimer.IsEnabled) { StopPlayback(); return; }
         if (_frames is not { Count: > 1 }) return;
-        _timer.Stop();
-        if (_viewFrame < _playIn || _viewFrame >= Math.Min(_playOut ?? _frames.Count - 1, _frames.Count - 1)) ShowStoredFrame(_playIn);
+        _timer.Stop(); _followSimulation = false;
+        if (_viewFrame < _playIn || _viewFrame >= Math.Min(_playOut ?? TimelineLastFrame, TimelineLastFrame)) ShowStoredFrame(_playIn);
         double fps = _loadedProject?.Display.Video.Fps ?? 30;
-        _playbackTimer.Interval = TimeSpan.FromSeconds(_quality.FrameDivisor / (fps * (double)(PlaybackSpeed.Value ?? 1)));
+        _playbackTimer.Interval = TimeSpan.FromSeconds(1 / (fps * (double)(PlaybackSpeed.Value ?? 1)));
         _playbackTimer.Start();
-        PlayButton.Content = Controls.IconView.Label("Pause", "Pause");
+        PlayButton.Content = Controls.IconView.Label("Pause", UiText.Text("Pause"));
     }
     private void StopPlayback()
     {
         _playbackTimer?.Stop();
-        if (PlayButton is not null) PlayButton.Content = Controls.IconView.Label("Play", "Play");
+        if (PlayButton is not null) PlayButton.Content = Controls.IconView.Label("Play", UiText.Text("Play"));
     }
     private async void ExportFrame_Click(object? sender, RoutedEventArgs e)
     {
@@ -383,24 +388,16 @@ public partial class MainWindow
             bool intensity = (sender as Control)?.Tag?.ToString() == "Intensity";
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export current frame", SuggestedFileName = $"{(intensity ? "intensity" : "field")}_{_viewFrame:D5}.png",
+                Title = UiText.Text("Export current frame"), SuggestedFileName = $"{(intensity ? "intensity" : "field")}_{_viewFrame:D5}.png",
                 DefaultExtension = "png", ShowOverwritePrompt = true,
                 FileTypeChoices = [new FilePickerFileType("PNG image") { Patterns = ["*.png"] }]
             });
             if (file is null) return;
-            // Save the rendered frame at canvas resolution, with export decorations.
-            _timer.Stop();
-            var bitmap = intensity ? _intensityBitmap : _fieldBitmap;
-            var size = bitmap.PixelSize;
-            var pixels = new int[size.Width * size.Height];
-            using (var source = bitmap.Lock())
-                for (int y = 0; y < size.Height; y++) Marshal.Copy(source.Address + y * source.RowBytes, pixels, y * size.Width, size.Width);
-            if (_loadedProject is { } project && size.Width == _engine.Width && size.Height == _engine.Height)
-                Rendering.ExportDecoration.Draw(project, _probeTraces, intensity ? ProbeLayer.Intensity : ProbeLayer.Field,
-                    size.Width, size.Height, _viewFrame, Math.Min(_viewFrame * StoredEvery, _runSteps), _runSteps, pixels);
+            var rendered = await RenderCurrentFrameForExport(intensity);
+            if (rendered is not { } image) return;
             await using var stream = await file.OpenWriteAsync();
             stream.SetLength(0);
-            PngEncoder.Write(stream, pixels, size.Width, size.Height);
+            PngEncoder.Write(stream, image.Pixels, image.Width, image.Height);
             StatusText.Text = "Frame exported: " + file.Name;
         }
         catch (Exception ex) { StatusText.Text = "Could not export frame: " + ex.Message; }
@@ -409,7 +406,7 @@ public partial class MainWindow
     {
         if (_selectedObject is not Probe probe || !_probeTraces.TryGetValue(probe, out var trace))
         {
-            StatusText.Text = "Select a recorded probe in the project tree first.";
+            StatusText.Text = UiText.Text("Select a recorded probe in the project tree first.");
             return;
         }
         bool running = _timer.IsEnabled;
@@ -418,7 +415,7 @@ public partial class MainWindow
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "Export probe recording", SuggestedFileName = ProbeCsv.FileName("Project", probe),
+                Title = UiText.Text("Export probe recording"), SuggestedFileName = ProbeCsv.FileName("Project", probe),
                 DefaultExtension = "csv", ShowOverwritePrompt = true,
                 FileTypeChoices = [new FilePickerFileType("CSV") { Patterns = ["*.csv"] }]
             });
@@ -426,7 +423,7 @@ public partial class MainWindow
             await using var stream = await file.OpenWriteAsync();
             stream.SetLength(0);
             using var writer = new StreamWriter(stream);
-            int rows = ProbeCsv.Write(writer, probe, trace, StoredEvery, 1);
+            int rows = ProbeCsv.Write(writer, probe, trace, _probeFramesAreFull ? _visualizeEvery : StoredEvery, 1);
             StatusText.Text = $"Exported {rows} probe rows to {file.Name}";
         }
         catch (Exception ex) { StatusText.Text = "Could not export probe: " + ex.Message; }
@@ -437,23 +434,23 @@ public partial class MainWindow
     {
         _editTimer.Stop();
         if (_loadedProject is null || (!_hasPendingChanges && _projectHistory?.IsAtSaved != false)) return true;
-        var dialog = new Window { Title = "Unsaved changes", Width = 420, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
-        var save = new Button { Content = "Save" };
-        var discard = new Button { Content = "Discard" };
-        var cancel = new Button { Content = "Cancel" };
+        var dialog = new Window { Title = UiText.Text("Unsaved changes"), Width = 420, SizeToContent = SizeToContent.Height, CanResize = false, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var save = new Button { Content = UiText.Text("Save") };
+        var discard = new Button { Content = UiText.Text("Discard") };
+        var cancel = new Button { Content = UiText.Text("Cancel") };
         save.Click += (_, _) => dialog.Close("Save");
         discard.Click += (_, _) => dialog.Close("Discard");
         cancel.Click += (_, _) => dialog.Close("Cancel");
         dialog.Content = new StackPanel
         {
             Margin = new Thickness(16), Spacing = 16,
-            Children = { new TextBlock { Text = "Save changes to this project?" }, new StackPanel
+            Children = { new TextBlock { Text = UiText.Text("Save changes to this project?") }, new StackPanel
             {
                 Orientation = global::Avalonia.Layout.Orientation.Horizontal, Spacing = 8,
                 Children = { save, discard, cancel }
             } }
         };
-        string? answer = await dialog.ShowDialog<string?>(this);
+        string? answer = await ShowWorkspaceDialog<string?>(dialog);
         if (answer == "Save") return await SaveProjectAsync(false);
         return answer == "Discard";
     }
@@ -471,9 +468,11 @@ public partial class MainWindow
             if (await ConfirmProjectReplacement()) { _allowClose = true; Close(); }
             return;
         }
-        _closingWorkspace = true;
-        DockAll_Click(this, new());
         base.OnClosing(e);
+        if (e.Cancel) return;
+        _desktop.DockLayout = _dock.CaptureLayout();
+        _closingWorkspace = true;
+        _dock.CloseWindows();
     }
     private void OnWorkspaceKeyDown(object? sender, KeyEventArgs e)
     {

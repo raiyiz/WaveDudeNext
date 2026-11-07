@@ -76,7 +76,7 @@ public partial class MainWindow : Window
 		var files = await StorageProvider.OpenFilePickerAsync(
 		    new FilePickerOpenOptions
 		    {
-		        Title = "Open WaveDudeNext Project",
+		        Title = UiText.Text("Open WaveDudeNext Project"),
 		        AllowMultiple = false,
 		        FileTypeFilter =
 		        [
@@ -132,7 +132,7 @@ public partial class MainWindow : Window
     {
         if (_loadedProject is null)
         {
-            StatusText.Text = "Open a project before saving.";
+            StatusText.Text = UiText.Text("Open a project before saving.");
             return false;
         }
 
@@ -145,7 +145,7 @@ public partial class MainWindow : Window
             {
                 var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
                 {
-                    Title = "Save WaveDudeNext Project",
+                    Title = UiText.Text("Save WaveDudeNext Project"),
                     SuggestedFileName = path is null ? "Project.wdproj" : Path.GetFileName(path),
                     DefaultExtension = "wdproj",
                     ShowOverwritePrompt = true,
@@ -221,7 +221,7 @@ public partial class MainWindow : Window
 		    _hasPendingChanges = false;
 		    _needsSimulationRebuild = false;
 
-		    StatusText.Text = "Changes applied";
+		    StatusText.Text = UiText.Text("Changes applied");
 		}
 		catch (Exception ex)
 		{
@@ -284,6 +284,7 @@ public partial class MainWindow : Window
 		ProjectChange change)
 	{
         _fieldLut = _intensityLut = null;
+        if (change.Item is Probe && change.Property == nameof(Probe.Name)) SynchronizeProbeViewports();
         FieldCanvas.InvalidateVisual();
         IntensityCanvas.InvalidateVisual();
         if (AutoApply.IsChecked == true)
@@ -408,7 +409,7 @@ public partial class MainWindow : Window
     private void Start_Click(object? sender,
         global::Avalonia.Interactivity.RoutedEventArgs e)
     {
-        StopPlayback();
+        StopPlayback(); _followSimulation = true;
         if (_hasPendingChanges) ApplyPendingChanges();
         if (_step >= _runSteps)
         {

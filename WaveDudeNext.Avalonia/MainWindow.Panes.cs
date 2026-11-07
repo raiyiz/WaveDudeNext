@@ -20,55 +20,144 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using WaveDudeNext.Avalonia.Docking;
+using WaveDudeNext.Avalonia.Controls;
 
 namespace WaveDudeNext.Avalonia;
 public partial class MainWindow
 {
-    private readonly Dictionary<Border, Window> _floatingPanes = new();
-    private TabControl? _previewTabs;
+    private DockWorkspace _dock = null!;
     private bool _closingWorkspace;
-    private void FloatPane_Click(object? sender, RoutedEventArgs e)
+    private bool _dockReady;
+    private DockLayout? _pendingProbeLayout;
+    private readonly Dictionary<WaveDudeNext.Model.Probe, int> _probeSlots = new();
+    private int _nextProbeSlot;
+    private readonly Dictionary<int, ProbeViewport> _probeViewports = new();
+    private void InitializeDocking()
     {
-        Border? host = (sender as Control)?.Tag?.ToString() switch { "Tree" => TreeHost, "Properties" => PropertiesHost, "Field" => FieldHost, "Intensity" => IntensityHost, _ => null };
-        if (host is null || _floatingPanes.ContainsKey(host)) return;
-        if (_previewTabs is not null) SideBySide_Click(this, new());
-        string key = (sender as Control)!.Tag!.ToString()!;
-        var content = host.Child;
-        host.Child = null;
-        var window = new Window { Title = "WaveDude Next — " + (sender as Control)?.Tag, Width = 650, Height = 650, Content = content, RequestedThemeVariant = RequestedThemeVariant };
-        if (_desktop.Panes.TryGetValue(key, out var saved))
-        {
-            window.Width = Math.Clamp(saved.Width, 240, 3000); window.Height = Math.Clamp(saved.Height, 200, 2000);
-            var position = new global::Avalonia.PixelPoint(saved.X, saved.Y);
-            if (Screens.ScreenFromPoint(position) is not null) window.Position = position;
-        }
-        _desktop.Panes[key] = new PanePlacement { Floating = true };
-        _floatingPanes.Add(host, window);
-        window.Closed += (_, _) =>
-        {
-            _desktop.Panes[key] = new PanePlacement { Floating = _closingWorkspace, X = window.Position.X, Y = window.Position.Y, Width = window.Width, Height = window.Height };
-            window.Content = null; host.Child = content; _floatingPanes.Remove(host);
-        };
-        window.Show(this);
-    }
-    private void DockAll_Click(object? sender, RoutedEventArgs e) { foreach (var window in _floatingPanes.Values.ToArray()) window.Close(); }
-    private void TabbedPreviews_Click(object? sender, RoutedEventArgs e)
-    {
-        DockAll_Click(this, new());
-        if (_previewTabs is not null) return;
+        // Keep the named preview/editor controls alive while replacing their fixed grid layout.
         PreviewGrid.Children.Remove(FieldHost); PreviewGrid.Children.Remove(IntensityHost);
-        foreach (var child in PreviewGrid.Children) child.IsVisible = false;
-        _previewTabs = new TabControl { ItemsSource = new[] { new TabItem { Header = "Field", Content = FieldHost }, new TabItem { Header = "Intensity", Content = IntensityHost } } };
-        Grid.SetColumnSpan(_previewTabs, 3); PreviewGrid.Children.Add(_previewTabs);
-        _desktop.TabbedPreviews = true;
+        WorkspaceGrid.Children.Clear(); WorkspaceGrid.ColumnDefinitions.Clear();
+        InstallOverlayBar(FieldHost, FieldCanvas, _desktop.FieldOverlays, "Field");
+        InstallOverlayBar(IntensityHost, IntensityCanvas, _desktop.IntensityOverlays, "Intensity");
+        RemoveOldTitle(PropertiesHost.Child as Grid);
+        RemoveOldTitle(ProjectTreeControl.Content as Grid);
+        _pendingProbeLayout = _desktop.DockLayout;
+        _nextProbeSlot = _desktop.ProbePaneIds.Values.DefaultIfEmpty(-1).Max() + 1;
+        _dock = new DockWorkspace(this);
+        _dock.SetScale(_desktop.Zoom);
+        _dock.Register("Tree", UiText.Text("Project"), TreeHost); _dock.Register("Field", UiText.Text("Field"), FieldHost);
+        _dock.Register("Intensity", UiText.Text("Intensity"), IntensityHost); _dock.Register("Properties", UiText.Text("Properties"), PropertiesHost);
+        WorkspaceGrid.Children.Add(_dock);
+        _dock.Reset(_desktop.TabbedPreviews);
+        _dock.LayoutChanged += () => { if (_dockReady && !_closingWorkspace) { _pendingProbeLayout = null; _desktop.DockLayout = _dock.CaptureLayout(); SaveDesktop(); } };
+        _dock.DragStatusChanged += text => { if (text.Length > 0) StatusText.Text = text; };
+        foreach (var canvas in new[] { FieldCanvas, IntensityCanvas })
+            canvas.ProbeViewportRequested += probe => OpenProbeViewport(probe);
     }
-    private void SideBySide_Click(object? sender, RoutedEventArgs e)
+    private static void RemoveOldTitle(Grid? grid)
     {
-        if (_previewTabs is null) return;
-        foreach (TabItem tab in _previewTabs.ItemsSource!) tab.Content = null;
-        PreviewGrid.Children.Remove(_previewTabs); _previewTabs = null;
-        foreach (var child in PreviewGrid.Children) child.IsVisible = true;
-        PreviewGrid.Children.Add(FieldHost); PreviewGrid.Children.Add(IntensityHost);
-        _desktop.TabbedPreviews = false;
+        if (grid is null || grid.RowDefinitions.Count < 2) return;
+        var header = grid.Children.FirstOrDefault(child => Grid.GetRow(child) == 0);
+        if (header is not null) grid.Children.Remove(header);
+        foreach (var child in grid.Children) Grid.SetRow(child, Math.Max(0, Grid.GetRow(child) - 1));
+        grid.RowDefinitions.RemoveAt(0);
     }
+    private void SynchronizeProbeViewports()
+    {
+        if (_dock is null || _loadedProject is not { } project) return;
+        bool menuChanged = false;
+        var activeSlots = new HashSet<int>();
+        var occurrences = new Dictionary<string, int>();
+        for (int i = 0; i < project.Probes.Count; i++)
+        {
+            var probe = project.Probes[i];
+            occurrences.TryGetValue(probe.Name, out int occurrence); occurrences[probe.Name] = occurrence + 1;
+            string identity = probe.Name + "\u001f" + occurrence;
+            if (!_probeSlots.TryGetValue(probe, out int slot))
+            {
+                slot = _desktop.ProbePaneIds.TryGetValue(identity, out int previous) && !activeSlots.Contains(previous) ? previous : _nextProbeSlot++;
+                _probeSlots[probe] = slot;
+            }
+            _desktop.ProbePaneIds[identity] = slot;
+            activeSlots.Add(slot);
+            if (!_probeViewports.TryGetValue(slot, out var view))
+            {
+                view = new ProbeViewport();
+                view.SelectionRequested += selected => { ProjectTreeControl.SelectModel(selected); SelectObject(selected); };
+                view.SeekRequested += delta => { _timer.Stop(); StopPlayback(); _followSimulation = false; ShowStoredFrame(_viewFrame + delta); };
+                view.ShowOverlayRequested += ShowProbeOverSimulation;
+                view.ExportRequested += () => ExportProbe_Click(this, new());
+                _probeViewports[slot] = view; menuChanged = true;
+            }
+            if (!ReferenceEquals(view.Probe, probe) || view.Title != probe.Name) menuChanged = true;
+            if (!ReferenceEquals(view.Probe, probe) && _dock.IsPaneVisible("Probe." + slot))
+            { FieldCanvas.Overlays.HiddenGraphs.Add(probe); IntensityCanvas.Overlays.HiddenGraphs.Add(probe); }
+            view.Probe = probe; view.Title = probe.Name;
+            view.Trace = _probeTraces.TryGetValue(probe, out var trace) ? trace : null;
+            view.Step = FieldCanvas.Step; view.Frame = FieldCanvas.Frame * FieldCanvas.ProfileFrameStride;
+            view.TotalSteps = _runSteps;
+            _dock.Register("Probe." + slot, probe.Name, view);
+            view.InvalidateVisual();
+        }
+        foreach (int slot in _probeViewports.Keys.Where(slot => !activeSlots.Contains(slot)).ToArray())
+        { _dock.Remove("Probe." + slot); _probeViewports.Remove(slot); menuChanged = true; }
+        foreach (var old in _probeSlots.Keys.Where(probe => !project.Probes.Contains(probe)).ToArray()) _probeSlots.Remove(old);
+        if (!_dockReady)
+        {
+            if (_desktop.DockLayout is { } layout) { _dock.Restore(layout); HideRestoredProbeOverlays(); }
+            else
+                foreach (var pair in _desktop.Panes.Where(p => p.Value.Floating).ToArray())
+                    _dock.Float(pair.Key, new global::Avalonia.PixelPoint(pair.Value.X, pair.Value.Y));
+            _dockReady = true;
+        }
+        if (_pendingProbeLayout is { } pending && project.Probes.Count > 0 && ProbePaneIds(pending).All(_dock.Contains))
+        { _dock.Restore(pending); HideRestoredProbeOverlays(); _pendingProbeLayout = null; _desktop.DockLayout = _dock.CaptureLayout(); SaveDesktop(); }
+        if (menuChanged)
+        {
+            ProbePanesMenu.Items.Clear();
+            for (int i = 0; i < project.Probes.Count; i++)
+            {
+                var probe = project.Probes[i];
+                var item = new MenuItem { Header = project.Probes[i].Name, Icon = new IconView { Drawing = "Probe" } };
+                item.Click += (_, _) => OpenProbeViewport(probe);
+                ProbePanesMenu.Items.Add(item);
+            }
+        }
+        ProbePanesMenu.IsEnabled = project.Probes.Count > 0;
+    }
+    private void HideRestoredProbeOverlays()
+    {
+        foreach (var pair in _probeViewports)
+            if (_dock.IsPaneVisible("Probe." + pair.Key) && pair.Value.Probe is { } probe)
+            { FieldCanvas.Overlays.HiddenGraphs.Add(probe); IntensityCanvas.Overlays.HiddenGraphs.Add(probe); }
+    }
+    private static IEnumerable<string> ProbePaneIds(DockLayout layout)
+    {
+        IEnumerable<string> NodeIds(DockNode? node) => node is null ? Array.Empty<string>() : node.IsSplit ? NodeIds(node.First).Concat(NodeIds(node.Second)) : node.Items;
+        return NodeIds(layout.Root).Concat(layout.Floating.SelectMany(f => NodeIds(f.Root))).Where(id => id.StartsWith("Probe.", StringComparison.Ordinal));
+    }
+    private void OpenProbeViewport(WaveDudeNext.Model.Probe probe)
+    {
+        SynchronizeProbeViewports();
+        if (!_probeSlots.TryGetValue(probe, out int slot)) return;
+        string id = "Probe." + slot;
+        if (_dock.IsPaneVisible(id)) _dock.Show(id);
+        else
+        {
+            string? other = _probeViewports.Keys.Select(key => "Probe." + key).FirstOrDefault(key => key != id && _dock.IsPaneVisible(key));
+            _dock.Dock(id, other ?? "Intensity", other is null ? DockSide.Bottom : DockSide.Tab);
+        }
+        HideProbeOverSimulation(probe);
+    }
+    private void FloatPane_Click(object? sender, RoutedEventArgs e)
+    { if ((sender as Control)?.Tag is string id) _dock.Float(id); }
+    private void ShowPane_Click(object? sender, RoutedEventArgs e)
+    { if ((sender as Control)?.Tag is string id) _dock.Show(id); }
+    private void DockAll_Click(object? sender, RoutedEventArgs e) => _dock.DockAll();
+    private void TabbedPreviews_Click(object? sender, RoutedEventArgs e)
+    { _dock.Show("Field"); _dock.Dock("Intensity", "Field", DockSide.Tab); _desktop.TabbedPreviews = true; }
+    private void SideBySide_Click(object? sender, RoutedEventArgs e)
+    { _dock.Show("Field"); _dock.Dock("Intensity", "Field", DockSide.Right); _desktop.TabbedPreviews = false; }
+    private void ResetLayout_Click(object? sender, RoutedEventArgs e) { _dock.Reset(); _desktop.TabbedPreviews = false; }
 }

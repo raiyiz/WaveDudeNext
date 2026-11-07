@@ -17,6 +17,7 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.LogicalTree;
 using Avalonia.Threading;
@@ -283,6 +284,46 @@ sealed class WorkspaceCheckApp : App
                 window.FindControl<Slider>("TimelineSlider")!.Value = 2;
                 Check((int)Field("_viewFrame")! == 2, "Timeline scrubs to an earlier stored frame");
                 Check(window.FindControl<MenuItem>("ExamplesMenu")!.Items.Count > 0, "Bundled examples are available");
+                var overlayCanvas = window.FindControl<SceneCanvas>("FieldCanvas")!;
+                var otherCanvas = window.FindControl<SceneCanvas>("IntensityCanvas")!;
+                window.FindControl<WaveDudeNext.Avalonia.Panes.ProjectTree>("ProjectTreeControl")!.SelectModel(project.Parts[0]);
+                await Task.Delay(40);
+                bool HasOverlayPixels(SceneCanvas canvas)
+                {
+                    using var picture = new global::Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize((int)canvas.Bounds.Width, (int)canvas.Bounds.Height));
+                    picture.Render(canvas);
+                    using var png = new MemoryStream(); picture.Save(png, global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+                    var decoded = SceneImageLoader.Load(png.ToArray());
+                    return Enumerable.Range(0, decoded.Width * decoded.Height).Any(index => decoded.Bgra[index * 4 + 3] != 0);
+                }
+                Check(HasOverlayPixels(overlayCanvas), "Preview drawings initially include selected geometry and probe graphs");
+                var showDrawings = window.GetVisualDescendants().OfType<global::Avalonia.Controls.Primitives.ToggleButton>()
+                    .Single(button => global::Avalonia.Automation.AutomationProperties.GetAutomationId(button) == "FieldDrawingsToggle");
+                var samplesBefore = new Half[frames.Width * frames.Height]; frames.CopyLayer(0, FrameLayer.Field, samplesBefore);
+                int historyBefore = ((ProjectHistory)Field("_projectHistory")!).Count;
+                bool pendingBefore = (bool)Field("_hasPendingChanges")!;
+                showDrawings.IsChecked = false;
+                Check(!HasOverlayPixels(overlayCanvas), "Hide drawings removes every vector overlay, including selected-object handles and labels");
+                Check(otherCanvas.Overlays.Drawings && ReferenceEquals(field.Source, window.FindControl<Image>("FieldImage")!.Source), "Hiding field drawings keeps the simulation image and intensity visibility independent");
+                var samplesAfter = new Half[samplesBefore.Length]; frames.CopyLayer(0, FrameLayer.Field, samplesAfter);
+                Check(samplesBefore.SequenceEqual(samplesAfter) && frames.Count == 6 && project.Sources.All(source => source.Enabled) && project.Probes.All(probe => probe.Active), "Overlay visibility preserves numerical frames, enabled sources and probe recording");
+                Check(((ProjectHistory)Field("_projectHistory")!).Count == historyBefore && (bool)Field("_hasPendingChanges")! == pendingBefore, "Overlay visibility does not dirty the project or create an undo step");
+                showDrawings.IsChecked = true;
+                Check(HasOverlayPixels(overlayCanvas), "Drawings can be restored after hiding everything");
+                var overlayOptions = window.GetVisualDescendants().OfType<Button>()
+                    .Single(button => global::Avalonia.Automation.AutomationProperties.GetAutomationId(button) == "FieldOverlayOptions");
+                overlayOptions.Flyout!.ShowAt(overlayOptions); await Task.Delay(40);
+                var optionsPanel = (StackPanel)((ScrollViewer)((Flyout)overlayOptions.Flyout).Content!).Content!;
+                var category = optionsPanel.Children.OfType<CheckBox>().Single(check => (string?)check.Content == "Source markers");
+                category.IsChecked = false;
+                Check(!overlayCanvas.Overlays.ShowsObject(project.Sources[0]) && project.Sources[0].Enabled, "Source-marker visibility does not disable its emitter");
+                category.IsChecked = true;
+                var individual = optionsPanel.Children.OfType<CheckBox>().Single(check => (string?)check.Content == "Source: " + project.Sources[0].Name);
+                individual.IsChecked = false;
+                Check(!overlayCanvas.Overlays.ShowsObject(project.Sources[0]) && overlayCanvas.Overlays.ShowsObject(project.Sources[1]), "Individual drawings can be hidden independently");
+                individual.IsChecked = true; overlayOptions.Flyout.Hide();
+                var visibilityJson = System.Text.Json.JsonSerializer.Serialize(overlayCanvas.Overlays);
+                Check(System.Text.Json.JsonSerializer.Deserialize<PreviewOverlays>(visibilityJson) is { Drawings: true, Sources: true }, "Preview overlay category settings can be persisted");
                 // Attach every editor to the real styled properties pane to catch template-only binding errors.
                 var pane = window.FindControl<WaveDudeNext.Avalonia.Panes.PropertiesPane>("PropertiesEditor")!;
                 foreach (var type in typeof(OpticalPart).Assembly.GetTypes().Where(type => type.IsSubclassOf(typeof(OpticalPart)) && !type.IsAbstract))
@@ -315,19 +356,105 @@ sealed class WorkspaceCheckApp : App
                 Check((int)Field("_playIn")! == (int)Field("_viewFrame")!, "Playback in point follows the current frame");
                 Invoke("ClearRange_Click");
                 Check((int)Field("_playIn")! == 0 && Field("_playOut") is null, "Playback range resets to the complete recording");
+                var dock = (WaveDudeNext.Avalonia.Docking.DockWorkspace)Field("_dock")!;
                 Invoke("TabbedPreviews_Click");
-                Check(Field("_previewTabs") is TabControl, "Previews can be tabbed");
-                Invoke("SideBySide_Click");
-                Check(Field("_previewTabs") is null && field.IsAttachedToVisualTree(), "Tabbed previews dock back side by side");
-                Invoke("FloatPane_Click", new MenuItem { Tag = "Properties" });
-                Check(window.FindControl<Border>("PropertiesHost")!.Child is null, "Properties pane floats into a separate window");
-                Invoke("DockAll_Click");
-                Check(window.FindControl<Border>("PropertiesHost")!.Child is not null, "Floating pane docks back without losing its content");
+                Check(dock.CaptureLayout().Root is not null, "Previews can be tabbed");
+                Invoke("SideBySide_Click"); await Task.Delay(60);
+                Check(field.IsAttachedToVisualTree(), "Tabbed previews dock back side by side");
+                Invoke("FloatPane_Click", new MenuItem { Tag = "Properties" }); await Task.Delay(60);
+                Check(dock.FloatingWindows.Count == 1 && pane.IsAttachedToVisualTree(), "Properties pane floats without losing its content");
+                Invoke("DockAll_Click"); await Task.Delay(60);
+                Check(dock.FloatingWindows.Count == 0 && pane.IsAttachedToVisualTree(), "Floating pane docks back without losing its content");
+                dock.Dock("Properties", "Field", WaveDudeNext.Avalonia.Docking.DockSide.Bottom);
+                var savedDock = dock.CaptureLayout();
+                dock.Reset(); dock.Restore(savedDock); await Task.Delay(60);
+                Check(dock.CaptureLayout().Root is not null && pane.IsAttachedToVisualTree(), "Nested dock layout survives save/restore");
+                Invoke("ResetLayout_Click");
+                if (WaveDudeNext.Avalonia.Rendering.FfmpegSink.FindExecutable("xdotool") is { } xdotool)
+                {
+                    async Task Mouse(params string[] arguments)
+                    {
+                        var info = new System.Diagnostics.ProcessStartInfo(xdotool) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
+                        foreach (string argument in arguments) info.ArgumentList.Add(argument);
+                        using var process = System.Diagnostics.Process.Start(info)!;
+                        await process.WaitForExitAsync(); await Task.Delay(80);
+                    }
+                    async Task Drag(Control header, global::Avalonia.PixelPoint to)
+                    {
+                        var from = header.PointToScreen(new Point(header.Bounds.Width / 2, header.Bounds.Height / 2));
+                        await Mouse("mousemove", "--sync", from.X.ToString(), from.Y.ToString(), "mousedown", "1");
+                        await Mouse("mousemove", "--sync", to.X.ToString(), to.Y.ToString());
+                        await Mouse("mouseup", "1");
+                    }
+                    Control Header(string id, Window? floating = null) => (Control)(floating ?? window).GetVisualDescendants().OfType<TabItem>()
+                        .Single(tab => global::Avalonia.Automation.AutomationProperties.GetAutomationId(tab) == "DockTab:" + id).Header!;
+                    WaveDudeNext.Avalonia.Docking.DockNode? Group(WaveDudeNext.Avalonia.Docking.DockNode? node, string id) => node is null ? null : node.Items.Contains(id) ? node : Group(node.First, id) ?? Group(node.Second, id);
+                    await Task.Delay(80);
+                    var targetHost = window.FindControl<Border>("FieldHost")!;
+                    var center = targetHost.PointToScreen(new Point(targetHost.Bounds.Width / 2, targetHost.Bounds.Height / 2));
+                    var cancelHeader = Header("Properties");
+                    var cancelStart = cancelHeader.PointToScreen(new Point(10, 8));
+                    await Mouse("mousemove", "--sync", cancelStart.X.ToString(), cancelStart.Y.ToString(), "mousedown", "1");
+                    await Mouse("mousemove", "--sync", center.X.ToString(), center.Y.ToString(), "key", "Escape", "mouseup", "1");
+                    Check(!dock.IsDragging && Group(dock.CaptureLayout().Root, "Field") != Group(dock.CaptureLayout().Root, "Properties"), "Escape cancels pane dragging without changing its docking group");
+                    await Drag(Header("Properties"), center);
+                    Check(Group(dock.CaptureLayout().Root, "Field")!.Items.Contains("Properties"), "Mouse drag docks a pane into another pane's tabs");
+                    dock.Reset(); await Task.Delay(100);
+                    await Drag(Header("Properties"), window.PointToScreen(new Point(180, 60)));
+                    Check(dock.FloatingWindows.Count == 1, "Mouse drag outside docking targets floats a pane");
+                    await Drag(Header("Properties", dock.FloatingWindows[0]), targetHost.PointToScreen(new Point(8, targetHost.Bounds.Height / 2)));
+                    Check(dock.FloatingWindows.Count == 0 && Group(dock.CaptureLayout().Root, "Field") != Group(dock.CaptureLayout().Root, "Properties"), "Floating pane mouse drag docks beside a target");
+                    dock.Reset(); await Task.Delay(100);
+                    var probeCanvas = window.FindControl<WaveDudeNext.Avalonia.Controls.SceneCanvas>("FieldCanvas")!;
+                    var probe = project.Probes[0];
+                    var graph = probeCanvas.GraphRect(probe);
+                    var start = probeCanvas.PointToScreen(new Point(graph.X + 35, graph.Y + 8));
+                    int oldX = probe.BoxX, oldY = probe.BoxY, pointX = probe.AX, pointY = probe.AY;
+                    await Mouse("mousemove", "--sync", start.X.ToString(), start.Y.ToString(), "mousedown", "1");
+                    await Mouse("mousemove", "--sync", (start.X - 25).ToString(), (start.Y - 20).ToString(), "mouseup", "1");
+                    Check((probe.BoxX != oldX || probe.BoxY != oldY) && probe.AX == pointX && probe.AY == pointY, "Dragging a probe viewport moves the graph without moving the probe");
+                    graph = probeCanvas.GraphRect(probe); start = probeCanvas.PointToScreen(graph.BottomRight - new Vector(3, 3));
+                    await Mouse("mousemove", "--sync", start.X.ToString(), start.Y.ToString(), "mousedown", "1");
+                    await Mouse("mousemove", "--sync", (start.X - 35).ToString(), (start.Y - 25).ToString(), "mouseup", "1");
+                    Check(probe.BoxSize == ProbeBoxSize.Custom && probe.BoxWidth < Probe.DefaultBoxWidth, "Dragging a probe viewport corner resizes its graph");
+                    typeof(MainWindow).GetMethod("OpenProbeViewport", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(window, new object[] { probe });
+                    await Task.Delay(100);
+                    Check(dock.IsPaneVisible("Probe.0") && window.GetVisualDescendants().OfType<WaveDudeNext.Avalonia.Controls.ProbeViewport>().Any(), "Probe graphs can open as dockable viewports");
+                    Check(!probeCanvas.Overlays.ShowsGraph(probe) && !otherCanvas.Overlays.ShowsGraph(probe), "Opening a separate probe viewport hides its graph over the simulation");
+                    Check(Group(dock.CaptureLayout().Root, "Probe.0") != Group(dock.CaptureLayout().Root, "Intensity"), "Probe viewport receives its own layout space outside the simulation image");
+                    typeof(MainWindow).GetMethod("ShowProbeOverSimulation", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(window, new object[] { probe });
+                    Check(probeCanvas.Overlays.ShowsGraph(probe) && dock.IsPaneVisible("Probe.0"), "Canvas graph can be restored independently while its external viewport remains open");
+                    typeof(MainWindow).GetMethod("HideProbeOverSimulation", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(window, new object[] { probe });
+                    dock.Float("Probe.0"); await Task.Delay(80);
+                    Check(dock.FloatingWindows.Count == 1 && dock.FloatingWindows[0].GetVisualDescendants().OfType<WaveDudeNext.Avalonia.Controls.ProbeViewport>().Any(), "Probe viewport can float independently");
+                    var floatingJson = System.Text.Json.JsonSerializer.Serialize(dock.CaptureLayout());
+                    dock.Restore(System.Text.Json.JsonSerializer.Deserialize<WaveDudeNext.Avalonia.Docking.DockLayout>(floatingJson)!); await Task.Delay(80);
+                    Check(dock.FloatingWindows.Count == 1 && dock.IsPaneVisible("Probe.0"), "Floating probe viewport survives serialized layout restoration");
+                    dock.Dock("Probe.0", "Intensity", WaveDudeNext.Avalonia.Docking.DockSide.Bottom); await Task.Delay(80);
+                    Check(dock.FloatingWindows.Count == 0 && dock.IsPaneVisible("Probe.0"), "Probe viewport docks below another pane");
+                    dock.Reset(); await Task.Delay(80);
+                    var lens = (LensPart)project.Parts[0];
+                    window.FindControl<WaveDudeNext.Avalonia.Panes.ProjectTree>("ProjectTreeControl")!.SelectModel(lens);
+                    probeCanvas.Focus();
+                    int oldDiameter = lens.Diameter;
+                    probeCanvas.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Tab });
+                    probeCanvas.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Down });
+                    Check(lens.Diameter > oldDiameter, "Keyboard geometry handles resize the selected lens");
+                    probeCanvas.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
+                    var canvasPeer = global::Avalonia.Automation.Peers.ControlAutomationPeer.CreatePeerForElement(probeCanvas)!;
+                    Check(canvasPeer.GetName().Contains(lens.Name) && canvasPeer.GetHelpText().Length > 0, "Preview automation describes selection and keyboard editing");
+                }
                 Invoke("Theme_Click", new MenuItem { Tag = "Light" });
                 Check(window.RequestedThemeVariant == global::Avalonia.Styling.ThemeVariant.Light, "Theme switching applies to the workspace");
+                Invoke("Theme_Click", new MenuItem { Tag = "Default" });
+                Check(global::Avalonia.Application.Current!.RequestedThemeVariant == global::Avalonia.Styling.ThemeVariant.Default, "System theme follows the platform rather than the application's old dark default");
                 Invoke("Theme_Click", new MenuItem { Tag = "Dark" });
-                Invoke("Language_Click", new MenuItem { Tag = "DE" });
+                pane.SelectedObject = project.Scene;
+                Invoke("Language_Click", new MenuItem { Tag = "DE" }); await Task.Delay(50);
                 Check(global::Avalonia.Application.Current!.TryFindResource("MenuFile", out var translated) && (string)translated! == "_Datei", "Language switching loads WPF German resources");
+                Check(pane.GetVisualDescendants().OfType<TextBlock>().Any(text => text.Text == "Breite"), "Editor labels use the selected language instead of local English copies");
+                Check(pane.GetVisualDescendants().OfType<NumericUpDown>().Any(input => global::Avalonia.Automation.AutomationProperties.GetLabeledBy(input) is not null), "Numeric form editors expose their associated labels to accessibility tools");
+                Check(global::Avalonia.Application.Current!.TryFindResource("Shell.Panes", out var paneLabel) && (string)paneLabel! == "Bereiche", "New docking shell labels are translated");
                 Invoke("Language_Click", new MenuItem { Tag = "EN" });
                 Invoke("UiZoom_Click", new MenuItem { Tag = "1.25" });
                 Check(window.FindControl<LayoutTransformControl>("WorkspaceScale")!.LayoutTransform is global::Avalonia.Media.ScaleTransform scale && scale.ScaleX == 1.25, "UI scale can be changed");
@@ -346,6 +473,13 @@ sealed class WorkspaceCheckApp : App
                 Invoke("PreviewQuality_Click", new MenuItem { Tag = "Economy" });
                 Invoke("UpdateSimulation");
                 var reduced = (FrameStore)Field("_frames")!;
+                Check(window.FindControl<Slider>("TimelineSlider")!.Maximum == 2 && reduced.Count == 2, "Economy timeline retains full frame numbering with repeated stored frames");
+                window.FindControl<Slider>("TimelineSlider")!.Value = 1;
+                Check((int)typeof(MainWindow).GetMethod("StoredFrameForTimeline", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(window, new object[] { 1 })! == 0, "Missing timeline frames use the preceding stored frame");
+                project.Simulation.Steps = 12;
+                var stillMethod = typeof(MainWindow).GetMethod("RenderCurrentFrameForExport", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+                var still = await (Task<(int Width, int Height, int[] Pixels)?>)stillMethod.Invoke(window, new object[] { false })!;
+                Check(still is { } fullStill && fullStill.Width == project.Scene.Width && fullStill.Height == project.Scene.Height, "Current-frame export reruns reduced previews at full resolution");
                 Check(reduced.Width == project.Scene.Width / 2 && reduced.Format == WaveDudeNext.Engine.FrameFormat.Index, "Economy preview stores half-resolution 8-bit frames");
                 Check(window.FindControl<Image>("FieldImage")!.Source!.Size.Width == reduced.Width, "Reduced preview bitmap matches the stored dimensions");
                 Invoke("PreviewQuality_Click", new MenuItem { Tag = "Full" });
