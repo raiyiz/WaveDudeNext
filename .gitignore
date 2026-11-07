@@ -15,3 +15,6 @@ _tools/*.txt
 .claude/settings.local.json
 
 desktop.ini
+
+# Local Linux release packages and staging
+artifacts/

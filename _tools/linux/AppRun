@@ -1,0 +1,5 @@
+#!/bin/sh
+# Keep the caller's working directory so relative project paths keep their meaning.
+set -eu
+appdir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec "$appdir/usr/lib/wavedude-next/WaveDudeNext.Avalonia" "$@"

@@ -1,5 +1,7 @@
 # Linux / Avalonia port
 
+For prerequisites, Release builds and the self-contained AppImage, see [Linux in README.md](README.md#linux).
+
 Run from the repository root (the folder containing `WaveDudeNext.sln`):
 
 ```sh
@@ -7,6 +9,30 @@ DOTNET_SYSTEM_NET_DISABLEIPV6=1 dotnet run --project WaveDudeNext.Avalonia
 ```
 
 The workspace now starts with an editable project. Project tree is on the left, field and intensity are side by side in the middle, properties are on the right, and the frame timeline is below. The splitters resize the panes.
+
+
+## Rebuild the AppImage
+
+Install the packaging prerequisites and download the official [appimagetool](https://github.com/AppImage/appimagetool) on an x86-64 Linux build machine:
+
+```sh
+sudo apt install curl squashfs-tools desktop-file-utils
+mkdir -p artifacts/appimage-tools
+curl -fL https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage \
+  -o artifacts/appimage-tools/appimagetool-x86_64.AppImage
+chmod +x artifacts/appimage-tools/appimagetool-x86_64.AppImage
+APPIMAGETOOL="$PWD/artifacts/appimage-tools/appimagetool-x86_64.AppImage" \
+  ./_tools/linux/build-appimage.sh
+```
+
+The script publishes a fresh self-contained Release build, assembles an AppDir, validates the desktop file, and writes the AppImage and checksum under `artifacts/linux-x64/`. It gets the version from `Directory.Build.props`; override it with `VERSION=0.1.3-linux.1` if needed. The build includes your current working-tree changes. Generated packages/staging are ignored by Git.
+
+The packaging tool runs without FUSE and downloads its AppImage runtime on the first build. To use a previously downloaded runtime, set `APPIMAGE_RUNTIME_FILE=/absolute/path/to/runtime-x86_64`. Record the tool/runtime versions and checksums when distributing a release; the upstream `continuous` downloads can change. This packages an AppImage only; apt and Flatpak packaging are separate future work.
+
+
+
+
+
 
 ## Available
 

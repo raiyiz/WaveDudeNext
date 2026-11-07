@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=WaveDude Next
+Comment=2D wave simulator for optics
+Exec=WaveDudeNext.Avalonia %F
+Icon=wavedude-next
+Categories=Science;Physics;
+Terminal=false
+StartupNotify=true

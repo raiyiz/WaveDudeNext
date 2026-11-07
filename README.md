@@ -1,6 +1,6 @@
 # WaveDude Next
 
-A 2D wave simulator for optics on Windows. You place light sources and optical parts on a canvas and watch how the waves propagate, as the field itself and as the intensity they build up, while the simulation runs.
+A 2D wave simulator for optics on Windows and Linux. You place light sources and optical parts on a canvas and watch how the waves propagate, as the field itself and as the intensity they build up, while the simulation runs.
 
 ![WaveDude Next with an example project: the project tree, the properties of the selected object, the wave field and the intensity side by side, and the timeline](Assets/main-window.png)
 
@@ -50,7 +50,9 @@ WaveDude Next is the successor of Wave Dude 2D by Jeroen Vleggaar (Huygens Optic
 
 **Download.** The [Releases](https://github.com/graealex/WaveDudeNext/releases) page offers each release as two EXEs for 64-bit Windows 10 or 11: a small one that needs the .NET 10 Desktop Runtime, which Windows offers to download on the first start if it is missing, and a larger one with the runtime inside, so nothing has to be installed. GPU acceleration uses the OpenCL driver that comes with the graphics driver. MP4 export uses Windows Media Foundation, which Windows N editions get with the Media Feature Pack.
 
-**Build from source.** With the .NET 10 SDK installed:
+### Windows build
+
+With the .NET 10 SDK installed:
 
 ```
 git clone https://github.com/graealex/WaveDudeNext
@@ -63,6 +65,66 @@ The program is `WaveDudeNext.WPF\bin\Release\net10.0-windows\WaveDudeNext.WPF.ex
 ```
 dotnet publish WaveDudeNext.WPF\WaveDudeNext.WPF.csproj -p:PublishProfile=SingleFile
 ```
+
+## Linux Build
+
+The Linux desktop uses the Avalonia frontend and the same simulation library as Windows. Build the **Avalonia project**, rather than the Windows WPF solution. The current AppImage targets **x86-64 Linux**; it was built and launch-tested using extraction mode on Pop!_OS / Ubuntu 22.04. Other distributions have not yet been verified. See [LINUX_PORT.md](LINUX_PORT.md) for Linux features and platform notes.
+
+### Prerequisites
+
+- A Linux desktop with X11, or a Wayland session with XWayland available.
+- **.NET 10 SDK** for building. Follow the [.NET Linux installation instructions](https://learn.microsoft.com/en-us/dotnet/core/install/linux) for your distribution and verify that `dotnet --list-sdks` lists a `10.0` SDK. Once the appropriate distribution feed is configured, Ubuntu/Debian installations that provide it can use `sudo apt install dotnet-sdk-10.0`. The prebuilt AppImage includes .NET and does not need the SDK or a separately installed .NET runtime.
+
+Ubuntu based distribution dependencies:
+
+```sh
+sudo apt update
+sudo apt install git ca-certificates libx11-6 libice6 libsm6 libfontconfig1 \
+  libxrandr2 libxi6 libxcursor1 libxext6 libxrender1 libgl1 fonts-dejavu-core
+```
+
+These include the [Avalonia Linux dependencies](https://docs.avaloniaui.net/docs/deployment/linux). Equivalent packages are required on other distributions.
+
+Optional features:
+
+```sh
+# H.264 MP4 export and additional scene-image codecs such as TIFF
+sudo apt install ffmpeg imagemagick
+
+# OpenCL loader, including libOpenCL.so used by the GPU engine
+sudo apt install ocl-icd-opencl-dev
+```
+
+GPU acceleration additionally needs your GPU vendor's **OpenCL driver/ICD**. The loader alone is insufficient. Without a usable OpenCL device the program falls back to CPU simulation. Hardware drivers are not bundled in the AppImage.
+
+### Build and run
+
+From this checkout's root (the directory containing `WaveDudeNext.sln`):
+
+```sh
+dotnet restore WaveDudeNext.Avalonia/WaveDudeNext.Avalonia.csproj
+dotnet build WaveDudeNext.Avalonia/WaveDudeNext.Avalonia.csproj -c Release
+dotnet run --project WaveDudeNext.Avalonia/WaveDudeNext.Avalonia.csproj -c Release --no-build
+```
+
+The first restore requires internet access to NuGet. If restore fails specifically because IPv6 is unavailable, retry it with `DOTNET_SYSTEM_NET_DISABLEIPV6=1` before the command.
+
+For a portable release directory with the runtime included:
+
+```sh
+dotnet publish WaveDudeNext.Avalonia/WaveDudeNext.Avalonia.csproj \
+  -c Release -r linux-x64 --self-contained true \
+  -p:PublishTrimmed=false -p:PublishSingleFile=false -p:PublishReadyToRun=false \
+  -o artifacts/linux-x64/publish
+./artifacts/linux-x64/publish/WaveDudeNext.Avalonia
+```
+
+Keep the whole publish directory together: it contains the native libraries, runtime, manual and examples. Trimming is disabled because the editors rely on reflection and bindings.
+
+### Run the prebuilt AppImage
+
+The local release build produces `artifacts/linux-x64/WaveDudeNext-0.1.3-linux-x86_64.AppImage` and a matching `.sha256` checksum. These are local build artifacts, not an uploaded GitHub release. 
+
 
 ## Documentation
 
