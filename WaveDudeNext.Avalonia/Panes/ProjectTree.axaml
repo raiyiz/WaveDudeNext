@@ -1,21 +1,67 @@
-
-<UserControl
-    xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    x:Class="WaveDudeNext.Avalonia.Panes.ProjectTree">
-
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             x:Class="WaveDudeNext.Avalonia.Panes.ProjectTree" Classes="projectTree">
+    <UserControl.Styles>
+        <Style Selector="Button.treeAction">
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="2"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+        </Style>
+        <Style Selector="Button.treeAction:pointerover">
+            <Setter Property="Background" Value="{DynamicResource WorkspaceHeader}"/>
+        </Style>
+        <Style Selector="Button.treeAction:disabled">
+            <Setter Property="Opacity" Value="0.35"/>
+        </Style>
+        <Style Selector="Button.treeAdd">
+            <Setter Property="MinHeight" Value="26"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+        </Style>
+        <Style Selector="Button.treeAdd:pointerover">
+            <Setter Property="Background" Value="{DynamicResource WorkspaceHeader}"/>
+        </Style>
+        <Style Selector="TreeViewItem">
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="Padding" Value="2,0"/>
+        </Style>
+        <Style Selector="TreeViewItem /template/ ContentPresenter#PART_HeaderPresenter">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        </Style>
+    </UserControl.Styles>
     <Grid RowDefinitions="Auto,*">
-
-        <Border Background="#292B30"
-                Padding="6">
-            <TextBlock Text="Project"
-                       FontWeight="Bold"/>
+        <Border Background="{DynamicResource WorkspacePane}" BorderBrush="{DynamicResource WorkspaceBorder}" BorderThickness="0,0,0,1" Padding="2,3">
+            <WrapPanel x:Name="TreeTools" Orientation="Horizontal">
+                <Button x:Name="AddSourceButton" Classes="treeAdd" Click="AddSource_Click"
+                        ToolTip.Tip="{DynamicResource TipAddSource}" AutomationProperties.Name="{DynamicResource TipAddSource}" AutomationProperties.AutomationId="ToolAddSource">
+                    <StackPanel Orientation="Horizontal" Spacing="4"><controls:IconView Drawing="Source" PlusBadge="True"/><TextBlock Text="{DynamicResource ToolAddSource}" VerticalAlignment="Center"/></StackPanel>
+                </Button>
+                <Button x:Name="AddProbeButton" Classes="treeAdd" Click="AddProbe_Click"
+                        ToolTip.Tip="{DynamicResource TipAddProbe}" AutomationProperties.Name="{DynamicResource TipAddProbe}" AutomationProperties.AutomationId="ToolAddProbe">
+                    <StackPanel Orientation="Horizontal" Spacing="4"><controls:IconView Drawing="Probe" PlusBadge="True"/><TextBlock Text="{DynamicResource ToolAddProbe}" VerticalAlignment="Center"/></StackPanel>
+                </Button>
+                <Button x:Name="AddPartButton" Classes="treeAdd" Click="AddPart_Click"
+                        ToolTip.Tip="{DynamicResource TipAddPart}" AutomationProperties.Name="{DynamicResource TipAddPart}" AutomationProperties.AutomationId="ToolAddPart">
+                    <StackPanel Orientation="Horizontal" Spacing="4"><controls:IconView Drawing="Part" PlusBadge="True"/><TextBlock Text="{DynamicResource ToolAddPart}" VerticalAlignment="Center"/><controls:IconView Drawing="DropDown" Width="8"/></StackPanel>
+                </Button>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="4,0,0,0">
+                    <Border Width="1" Background="{DynamicResource WorkspaceBorder}" Margin="0,2,4,2"/>
+                    <Button x:Name="MoveUpButton" Classes="treeAction" Click="MoveUp_Click" ToolTip.Tip="{DynamicResource TipMoveUp}" AutomationProperties.Name="{DynamicResource TipMoveUp}" AutomationProperties.AutomationId="ToolMoveUp"><controls:IconView Drawing="Up"/></Button>
+                    <Button x:Name="MoveDownButton" Classes="treeAction" Click="MoveDown_Click" ToolTip.Tip="{DynamicResource TipMoveDown}" AutomationProperties.Name="{DynamicResource TipMoveDown}" AutomationProperties.AutomationId="ToolMoveDown"><controls:IconView Drawing="Down"/></Button>
+                    <Button x:Name="RemoveButton" Classes="treeAction" Click="Remove_Click" ToolTip.Tip="{DynamicResource TipRemove}" AutomationProperties.Name="{DynamicResource TipRemove}" AutomationProperties.AutomationId="ToolRemove"><controls:IconView Drawing="Remove"/></Button>
+                </StackPanel>
+            </WrapPanel>
         </Border>
-
-        <TreeView x:Name="ProjectTreeView"
-                  SelectionMode="Multiple" Grid.Row="1"
-                  Margin="4"/>
-
+        <TreeView x:Name="ProjectTreeView" Grid.Row="1" SelectionMode="Multiple" Margin="2,3"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
     </Grid>
 </UserControl>
-

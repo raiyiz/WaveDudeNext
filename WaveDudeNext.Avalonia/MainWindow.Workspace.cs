@@ -59,6 +59,26 @@ public partial class MainWindow
     private readonly System.Collections.Generic.List<object> _selection = new();
     private bool _syncingSelection;
 
+    private void OnProjectTreeCommand(string command, object? target)
+    {
+        if (target is not null && command is "MoveUp" or "MoveDown" or "Remove")
+        {
+            ProjectTreeControl.SelectModel(target);
+            SelectObject(target);
+        }
+        var args = new RoutedEventArgs();
+        switch (command)
+        {
+            case "AddSource": AddSource_Click(this, args); break;
+            case "AddProbe": AddProbe_Click(this, args); break;
+            case "AddScheme": AddScheme_Click(this, args); break;
+            case "AddPart": AddPart_Click(new Button { Tag = target }, args); break;
+            case "MoveUp": MoveObject_Click(new Button { Tag = "-1" }, args); break;
+            case "MoveDown": MoveObject_Click(new Button { Tag = "1" }, args); break;
+            case "Remove": Delete_Click(this, args); break;
+        }
+    }
+
     private void InitializeWorkspace()
     {
         _playbackTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(33) };
@@ -80,6 +100,7 @@ public partial class MainWindow
             _editTimer.Stop();
             if (AutoApply.IsChecked == true) ApplyPendingChanges();
         };
+        ProjectTreeControl.CommandRequested += OnProjectTreeCommand;
         ProjectTreeControl.SelectedModelsChanged += models =>
         {
             if (_syncingSelection) return;

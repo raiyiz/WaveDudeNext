@@ -23,6 +23,7 @@ The workspace now starts with an editable project. Project tree is on the left, 
 
 ## Desktop and export parity
 
+- WPF-style Project pane with Source/Probe add buttons, a complete Part menu, folder plus buttons and per-object up/down/remove controls. Boundary arrows disable automatically; row commands support undo. Checkboxes precede the matching object icons and control source/part enablement or probe recording. The default layout gives the tree more room; existing saved layouts retain their widths.
 - Vector icons on menus, toolbars, playback controls, the project tree and editor buttons. Optical-part drawings are copied from WPF; command icons use portable vectors rather than Windows-only icon fonts.
 - System clipboard cut/copy/paste with Ctrl+X/C/V, multiple object selection, group moves, duplication and deletion. Text editors retain their native keyboard shortcuts. Ctrl-click canvas objects to extend/toggle selection; the tree also supports multiple selection.
 - Drag project objects from the tree onto a preview to place them, or onto another tree row to reorder them. Hold Ctrl to copy. Drop project files, classic configuration JSON, scene images or copied object XML onto the workspace.

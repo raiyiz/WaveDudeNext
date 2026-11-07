@@ -63,6 +63,7 @@ public partial class MainWindow
         dictionaries.Clear();
         dictionaries.Add(new ResourceInclude(new Uri("avares://WaveDudeNext.Avalonia/")) { Source = new Uri($"avares://WaveDudeNext.Avalonia/Styles/Strings.{language}.axaml") });
         dictionaries.Add(new ResourceInclude(new Uri("avares://WaveDudeNext.Avalonia/")) { Source = new Uri($"avares://WaveDudeNext.Avalonia/Styles/Strings.Shell.{language}.axaml") });
+        ProjectTreeControl.RefreshLanguage();
         foreach (var bar in _overlayBars) bar.RefreshLanguage();
         if (_dock is not null)
         {

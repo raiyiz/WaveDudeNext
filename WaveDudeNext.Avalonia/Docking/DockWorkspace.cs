@@ -104,7 +104,7 @@ public sealed partial class DockWorkspace : Grid
     {
         CaptureSizes(); DetachContent(); CloseAllFloating();
         var previews = tabbed ? DockNode.Group("Field", "Intensity") : DockNode.Split(DockNode.Group("Field"), DockNode.Group("Intensity"));
-        _root = DockNode.Split(DockNode.Group("Tree"), DockNode.Split(previews, DockNode.Group("Properties"), ratio: 0.72), ratio: 0.16);
+        _root = DockNode.Split(DockNode.Group("Tree"), DockNode.Split(previews, DockNode.Group("Properties"), ratio: 0.72), ratio: 0.25);
         Rebuild(); Changed();
     }
     public void Dock(string id, string? targetId, DockSide side)

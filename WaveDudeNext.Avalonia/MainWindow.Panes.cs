@@ -41,7 +41,6 @@ public partial class MainWindow
         InstallOverlayBar(FieldHost, FieldCanvas, _desktop.FieldOverlays, "Field");
         InstallOverlayBar(IntensityHost, IntensityCanvas, _desktop.IntensityOverlays, "Intensity");
         RemoveOldTitle(PropertiesHost.Child as Grid);
-        RemoveOldTitle(ProjectTreeControl.Content as Grid);
         _pendingProbeLayout = _desktop.DockLayout;
         _nextProbeSlot = _desktop.ProbePaneIds.Values.DefaultIfEmpty(-1).Max() + 1;
         _dock = new DockWorkspace(this);

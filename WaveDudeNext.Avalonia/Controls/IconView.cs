@@ -39,7 +39,7 @@ public sealed class IconView : Control
         var brush = GetValue(TextBlock.ForegroundProperty);
         if (Shapes.TryGetValue(Drawing, out var stroke)) context.DrawGeometry(null, new Pen(brush, 1), stroke);
         if (Shapes.TryGetValue(Drawing + "Fill", out var fill)) context.DrawGeometry(brush, null, fill);
-        if (PlusBadge) context.DrawGeometry(null, new Pen(brush, 1.5), Shapes["PlusBadge"]);
+        if (PlusBadge) context.DrawGeometry(null, new Pen(Brushes.DeepSkyBlue, 1.5), Shapes["PlusBadge"]);
     }
     public static object Label(string drawing, string text) => new StackPanel
     {
@@ -48,6 +48,12 @@ public sealed class IconView : Control
     };
     private static readonly Dictionary<string, Geometry> Shapes = new()
     {
+        ["Scene"] = Geometry.Parse("M1.5,2.5 H14.5 V13.5 H1.5 Z M2,12 L6,7 L9,10 L11,8 L14,12 M10,5 A1,1 0 1 1 12,5 A1,1 0 1 1 10,5"),
+        ["Simulation"] = Geometry.Parse("M6,0.5 H10 M8,0.5 V3 M12,3 L14,1 M2,9 A6,6 0 1 1 14,9 A6,6 0 1 1 2,9 M8,5 V9 H11"),
+        ["Display"] = Geometry.Parse("M1.5,2.5 H14.5 V11.5 H1.5 Z M8,12 V15 M5,15 H11"),
+        ["Add"] = Geometry.Parse("M8,3 V13 M3,8 H13"),
+        ["Remove"] = Geometry.Parse("M3,8 H13"),
+        ["DropDownFill"] = Geometry.Parse("M0,6 L8,6 L4,10 Z"),
         ["Source"] = Geometry.Parse("M3.5,7.5 A4,4 0 1 1 11.5,7.5 A4,4 0 1 1 3.5,7.5 M7.5,0 V2 M7.5,13 V15 M0,7.5 H2 M13,7.5 H15"),
         ["Probe"] = Geometry.Parse("M4.5,4.5 H10.5 V10.5 H4.5 Z M7.5,0 V2 M7.5,13 V15 M0,7.5 H2 M13,7.5 H15"),
         ["Part"] = Geometry.Parse("M3.5,7.5 A4,4 0 1 1 11.5,7.5 A4,4 0 1 1 3.5,7.5 M5.5,7.5 A2,2 0 1 1 9.5,7.5 A2,2 0 1 1 5.5,7.5 M7.5,0 V2 M7.5,13 V15 M0,7.5 H2 M13,7.5 H15"),
