@@ -31,8 +31,8 @@ version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
 
 			<TextBlock Classes="formLabel" Text="{DynamicResource Label.Project.Seed}" />
 			<DockPanel>
-				<Button DockPanel.Dock="Right" Margin="6,0,0,0" Content="{DynamicResource ButtonNewSeed}"
-				        Click="OnReseed" AutomationProperties.AutomationId="ProjectNewSeed" />
+				<Button DockPanel.Dock="Right" Margin="6,0,0,0"
+				        Click="OnReseed" AutomationProperties.AutomationId="ProjectNewSeed" ><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Reset"/><TextBlock Text="{DynamicResource ButtonNewSeed}"/></StackPanel></Button>
 				<NumericUpDown Value="{Binding Seed, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Project.Seed}" FormatString="0" ParsingNumberStyle="Integer" Minimum="-2147483648" Maximum="2147483647"/>
 			</DockPanel>
 

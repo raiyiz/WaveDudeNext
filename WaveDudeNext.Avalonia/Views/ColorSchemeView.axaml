@@ -75,8 +75,8 @@ version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
 						<DockPanel Margin="0,0,0,4">
-							<Button DockPanel.Dock="Right" Content="×" Padding="5,0" ToolTip.Tip="{DynamicResource TipRemoveStop}"
-							        Click="OnRemoveStop" />
+							<Button DockPanel.Dock="Right" Padding="5,0" ToolTip.Tip="{DynamicResource TipRemoveStop}"
+							        Click="OnRemoveStop" ><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Delete"/></StackPanel></Button>
 							<NumericUpDown DockPanel.Dock="Left" Width="80" Minimum="0" Maximum="1" Increment="0.01" Value="{Binding Position, Mode=TwoWay}"
 							                    ToolTip.Tip="{DynamicResource TipStopPosition}" />
 							<!-- the swatch opens the colour picker (Space, Enter, Down); ids carry the stop's position -->
@@ -90,8 +90,8 @@ version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
 			</ItemsControl>
 
 			<StackPanel Orientation="Horizontal">
-				<Button Padding="8,2" Margin="0,2,6,0" Content="{DynamicResource ButtonAddStop}" ToolTip.Tip="{DynamicResource TipAddStop}"
-				        Click="OnAddStop" AutomationProperties.AutomationId="SchemeAddStop" />
+				<Button Padding="8,2" Margin="0,2,6,0" ToolTip.Tip="{DynamicResource TipAddStop}"
+				        Click="OnAddStop" AutomationProperties.AutomationId="SchemeAddStop" ><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="PlusBadge"/><TextBlock Text="{DynamicResource ButtonAddStop}"/></StackPanel></Button>
 			</StackPanel>
 		</StackPanel>
 

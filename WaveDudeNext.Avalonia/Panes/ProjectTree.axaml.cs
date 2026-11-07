@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Input;
 using WaveDudeNext.Model;
 
 namespace WaveDudeNext.Avalonia.Panes;
@@ -10,17 +11,41 @@ namespace WaveDudeNext.Avalonia.Panes;
 public partial class ProjectTree : UserControl
 {
     public event Action<object?>? SelectedModelChanged;
+    public event Action<object[]>? SelectedModelsChanged;
+    public object[] DraggedObjects { get; private set; } = Array.Empty<object>();
+    private Project? _project;
+    private PointerPressedEventArgs? _dragPress;
+    private global::Avalonia.Point _dragOrigin;
 
     public ProjectTree()
     {
         InitializeComponent();
 
+        ProjectTreeView.AddHandler(PointerPressedEvent, (_, e) =>
+        {
+            _dragPress = e; _dragOrigin = e.GetPosition(ProjectTreeView);
+        }, global::Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        ProjectTreeView.PointerMoved += async (_, e) =>
+        {
+            if (_dragPress is null || !e.GetCurrentPoint(ProjectTreeView).Properties.IsLeftButtonPressed || _project is null) return;
+            var pointer = e.GetPosition(ProjectTreeView);
+            if (Math.Abs(pointer.X - _dragOrigin.X) + Math.Abs(pointer.Y - _dragOrigin.Y) < 8) return;
+            var press = _dragPress; _dragPress = null;
+            var models = ProjectTreeView.SelectedItems?.OfType<TreeViewItem>().Select(row => row.Tag).Where(item => item is WaveDudeNext.Model.INamed).Cast<object>().ToArray() ?? Array.Empty<object>();
+            if (models.Length == 0) return;
+            var data = new DataTransfer(); data.Add(DataTransferItem.CreateText(ProjectClipboard.Write(_project, models)));
+            DraggedObjects = models;
+            try { await DragDrop.DoDragDropAsync(press, data, DragDropEffects.Copy | DragDropEffects.Move); }
+            catch (Exception ex) { Console.WriteLine("Drag failed: " + ex.Message); }
+            finally { DraggedObjects = Array.Empty<object>(); }
+        };
         ProjectTreeView.SelectionChanged += (_, _) =>
         {
             if (ProjectTreeView.SelectedItem is TreeViewItem row)
                 SelectedModelChanged?.Invoke(row.Tag);
             else
                 SelectedModelChanged?.Invoke(null);
+            SelectedModelsChanged?.Invoke(ProjectTreeView.SelectedItems?.OfType<TreeViewItem>().Select(row => row.Tag).Where(item => item is not null).Cast<object>().ToArray() ?? Array.Empty<object>());
         };
     }
 
@@ -43,6 +68,7 @@ public partial class ProjectTree : UserControl
 
     public void LoadProject(Project? project)
     {
+        _project = project;
         var selected = SelectedModel;
         ProjectTreeView.ItemsSource = null;
 
@@ -139,6 +165,15 @@ public partial class ProjectTree : UserControl
             else row.Header = title;
 		}
 
+        string drawing = model switch
+        {
+            Source => "Source", Probe => "Probe", OpticalPart part => part.GetType().Name.Replace("Part", ""),
+            WaveDudeNext.Rendering.ColorScheme => "Palette", Project => "Project", CollectionSelection => "Open", _ => "Project"
+        };
+        var header = row.Header as Control ?? new TextBlock { Text = title };
+        row.Header = null;
+        row.Header = new StackPanel { Orientation = global::Avalonia.Layout.Orientation.Horizontal, Spacing = 6,
+            Children = { new Controls.IconView { Drawing = drawing }, header } };
 		return row;
 	}
 

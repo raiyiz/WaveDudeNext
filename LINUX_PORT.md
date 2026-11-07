@@ -21,18 +21,29 @@ The workspace now starts with an editable project. Project tree is on the left, 
 - Current field/intensity PNG export, scene-image embedding/extraction/removal, image composition with optical parts, external image-file refresh.
 - Ctrl+N/O/S, Ctrl+Shift+S, Ctrl+Z/Y/D outside text editors, Delete outside text editors, F5/F6/F7.
 
-## Remaining Windows parity
+## Desktop and export parity
 
-This is not yet a complete replacement for the WPF application. Still missing:
+- Vector icons on menus, toolbars, playback controls, the project tree and editor buttons. Optical-part drawings are copied from WPF; command icons use portable vectors rather than Windows-only icon fonts.
+- System clipboard cut/copy/paste with Ctrl+X/C/V, multiple object selection, group moves, duplication and deletion. Text editors retain their native keyboard shortcuts. Ctrl-click canvas objects to extend/toggle selection; the tree also supports multiple selection.
+- Drag project objects from the tree onto a preview to place them, or onto another tree row to reorder them. Hold Ctrl to copy. Drop project files, classic configuration JSON, scene images or copied object XML onto the workspace.
+- Recent-project menu, classic project import with conversion notes, integrated manual (F1), and About/diagnostics.
+- View > Panes floats/docks individual panes and switches previews between tabs and side-by-side views. Window dimensions, pane widths, floating positions, preview layout, UI scale, theme and language are saved in the user's local application-data directory under `WaveDudeNext/desktop.json`.
+- Dark/light/system themes, 80–150% UI scale, and the WPF English/German/French/Dutch editor resources. Some newly introduced command/dialog labels remain English.
+- Wheel zoom, middle-button pan and View > Fit previews. Selected parts have dimension handles; polygons have a radius handle, and outlines/fibres have draggable points/control handles. The properties pane retains numeric access to every geometry setting.
+- Simulation batches run on a worker; pause cancels the active batch, and reset/rebuild/close wait for engine ownership before replacing resources. Preview presets offer full 16-bit, balanced 8-bit, or half-resolution/alternate-frame 8-bit capture. Automatic selects a preset from available physical memory. The timeline reports RAM/disk use and warns when disk caching is required.
+- Playback in/out points and range reset live under Simulation. Simulation > Re-record probes generates fresh full-quality recordings while retaining preview frames.
+- File > Export recording writes the playback range to PNG/JPEG/OpenEXR sequences, AVI, MPEG-1 or MOV (Animation/PNG), with progress and cancellation. OpenEXR can store intensity as I or √I. Reduced previews automatically rerun at full quality for export. Graphs/markers follow the project's export settings.
+- Linux MP4 export uses an optional system `ffmpeg` with H.264 encoding. Other video/sequence encoders are built into the shared library.
+- PNG/JPEG/BMP/GIF/WebP scene decoding uses Skia. When Skia cannot decode an image, an optional system ImageMagick (`magick` or `convert`) converts it to straight-alpha PNG; TIFF is covered by the verification harness when ImageMagick is installed. Other codecs, including JPEG XR, depend on that installation's delegates.
 
-- Docking, floating/tabbed panes, workspace persistence, UI zoom, theme/language switching and full accessibility parity.
-- WPF's full canvas manipulation system: shape-specific resize handles, path-handle dragging, multi-selection, pan/zoom and drag/drop.
-- System clipboard cut/copy/paste, recent files, classic project import UI, integrated manual and diagnostics/about panes.
-- Background run orchestration and cancellation, preview-quality settings/automatic tuning, memory-warning UI, independent probe-only reruns and all playback in/out controls.
-- Video export, image sequences, OpenEXR export and rendering graph/marker decorations into exports. PNG export currently writes the displayed bitmap and its geometry edge overlay; canvas labels/graphs are separate visual overlays.
-- WPF/WIC image-format coverage: the Linux image picker currently supports PNG/JPEG/BMP/GIF/WebP through Skia.
+## Remaining differences from Windows
 
-The Avalonia edits remain in `WaveDudeNext.Avalonia`; the WPF frontend and shared numerical library are unchanged.
+- Panes float and dock through commands; WPF's arbitrary drag-to-dock layout system is not reproduced.
+- Dimension and path handles cover common edits; specialised WPF handles such as lens curvature and source-array manipulation still use the numeric editors.
+- Reduced-quality previews show stored-frame numbering, rather than WPF's full timeline with repeated stand-in frames. Current-frame PNG export uses the displayed preview resolution; recording exports rerun at full quality.
+- Full screen-reader/accessibility parity, translation of all new shell/dialog text, and every Windows-installed WIC codec are not established. Native file pickers, pointer dragging and assistive technologies require manual testing.
+
+Changes are confined to the Avalonia frontend, its verification harness and documentation; the WPF frontend and shared numerical library are unchanged.
 
 ## Verification
 

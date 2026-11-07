@@ -29,18 +29,20 @@ using WaveDudeNext.Probes;
 namespace WaveDudeNext.Avalonia.Controls;
 
 /// <summary>Canvas selection, movement, rotation and model outlines over a uniformly scaled preview.</summary>
-public sealed class SceneCanvas : Control
+public sealed partial class SceneCanvas : Control
 {
     public Project? Project { get; set; }
     public object? SelectedObject { get; set; }
+    public IReadOnlyList<object> Selection { get; set; } = Array.Empty<object>();
     public IReadOnlyDictionary<Probe, ProbeTrace>? Traces { get; set; }
     public ProbeLayer Layer { get; set; }
     public int Frame { get; set; }
+    public int ProfileFrameStride { get; set; } = 1;
     public int Step { get; set; }
     public int TotalSteps { get; set; }
     public int CanvasWidth { get; set; } = 256;
     public int CanvasHeight { get; set; } = 256;
-    public event Action<object?>? SelectionRequested;
+    public event Action<object?, bool>? SelectionRequested;
     public event Action? EditCompleted;
     private Point _last;
     private bool _dragging;
@@ -49,8 +51,8 @@ public sealed class SceneCanvas : Control
     public SceneCanvas() { Focusable = true; ClipToBounds = true; }
     private (double Scale, Point Origin) Mapping()
     {
-        double scale = Math.Min(Bounds.Width / CanvasWidth, Bounds.Height / CanvasHeight);
-        return (Math.Max(scale, 0.000001), new Point((Bounds.Width - CanvasWidth * scale) / 2, (Bounds.Height - CanvasHeight * scale) / 2));
+        double scale = Math.Min(Bounds.Width / CanvasWidth, Bounds.Height / CanvasHeight) * Zoom;
+        return (Math.Max(scale, 0.000001), new Point((Bounds.Width - CanvasWidth * scale) / 2 + Pan.X, (Bounds.Height - CanvasHeight * scale) / 2 + Pan.Y));
     }
     private Point Screen(double x, double y)
     {
@@ -70,7 +72,7 @@ public sealed class SceneCanvas : Control
         bool handles = project.Display.HandlesInPreview;
         foreach (var part in project.Parts)
         {
-            bool selected = ReferenceEquals(part, SelectedObject);
+            bool selected = Selection.Contains(part);
             if (!handles && !selected) continue;
             var points = part.Outline().Select(p => part.ToCanvas(p.X, p.Y)).Select(p => Screen(p.X, p.Y)).ToArray();
             var pen = new Pen(selected ? Brushes.DeepSkyBlue : Brushes.Gray, selected ? 2 : 1);
@@ -80,6 +82,7 @@ public sealed class SceneCanvas : Control
             context.DrawEllipse(selected ? Brushes.DeepSkyBlue : Brushes.Gray, null, center, 3, 3);
             if (selected)
             {
+                DrawEditHandles(context, part);
                 var rotation = part.ToCanvas(part.AxisReach + 20, 0);
                 Point end = Screen(rotation.X, rotation.Y);
                 context.DrawLine(pen, center, end);
@@ -89,7 +92,7 @@ public sealed class SceneCanvas : Control
         }
         foreach (var source in project.Sources)
         {
-            bool selected = ReferenceEquals(source, SelectedObject);
+            bool selected = Selection.Contains(source);
             if (!handles && !selected) continue;
             Point point = Screen(source.X, source.Y);
             var pen = new Pen(selected ? Brushes.DeepSkyBlue : Brushes.Yellow, 1.5);
@@ -102,7 +105,7 @@ public sealed class SceneCanvas : Control
         {
             if (probe.Layer != Layer || !probe.Active) continue;
             DrawGraph(context, probe);
-            bool selected = ReferenceEquals(probe, SelectedObject);
+            bool selected = Selection.Contains(probe);
             if (!handles && !selected) continue;
             Point point = Screen(probe.AX, probe.AY);
             var pen = new Pen(selected ? Brushes.DeepSkyBlue : Brushes.LimeGreen, 1.5);
@@ -115,7 +118,7 @@ public sealed class SceneCanvas : Control
     {
         var box = ProbeGraph.BoxInCanvas(probe, CanvasWidth, CanvasHeight);
         var data = Traces is not null && Traces.TryGetValue(probe, out var trace)
-            ? ProbeGraphData.At(trace, Step, Frame) : default;
+            ? ProbeGraphData.At(trace, Step, Frame * ProfileFrameStride) : default;
         Point origin = Screen(box.X, box.Y);
         double scale = Mapping().Scale;
         float width = (float)(box.Width * scale), height = (float)(box.Height * scale);
@@ -181,9 +184,13 @@ public sealed class SceneCanvas : Control
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
+        if (e.GetCurrentPoint(this).Properties.IsMiddleButtonPressed)
+        { _panning = true; _panStart = e.GetPosition(this); e.Pointer.Capture(this); e.Handled = true; return; }
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         Focus();
         Point point = Canvas(e.GetPosition(this));
+        _editHandle = FindEditHandle(e.GetPosition(this));
+        if (_editHandle is not null) { _dragging = true; e.Pointer.Capture(this); e.Handled = true; return; }
         _rotating = false;
         if (SelectedObject is OpticalPart part)
         {
@@ -191,8 +198,8 @@ public sealed class SceneCanvas : Control
             _rotating = Distance(e.GetPosition(this), Screen(handle.X, handle.Y)) <= 9;
         }
         object? hit = _rotating ? SelectedObject : Hit(point);
+        SelectionRequested?.Invoke(hit, e.KeyModifiers.HasFlag(KeyModifiers.Control));
         SelectedObject = hit;
-        SelectionRequested?.Invoke(hit);
         _last = point;
         _dragging = hit is IMovable;
         if (_dragging) e.Pointer.Capture(this);
@@ -202,6 +209,9 @@ public sealed class SceneCanvas : Control
     protected override void OnPointerMoved(PointerEventArgs e)
     {
         base.OnPointerMoved(e);
+        if (_panning) { Point now = e.GetPosition(this); Pan += now - _panStart; _panStart = now; ViewChanged?.Invoke(); InvalidateVisual(); return; }
+        if (_dragging && _editHandle is { } handle && SelectedObject is OpticalPart selected)
+        { var local = selected.ToFrame(Canvas(e.GetPosition(this)).X, Canvas(e.GetPosition(this)).Y); handle.Set(local.X, local.Y); InvalidateVisual(); return; }
         if (!_dragging || SelectedObject is not IMovable movable) return;
         Point point = Canvas(e.GetPosition(this));
         if (_rotating && SelectedObject is OpticalPart part)
@@ -209,8 +219,9 @@ public sealed class SceneCanvas : Control
         else
         {
             int dx = (int)Math.Round(point.X - _last.X), dy = (int)Math.Round(point.Y - _last.Y);
-            (dx, dy) = Movable.Limit([movable], dx, dy, CanvasWidth, CanvasHeight);
-            movable.MoveBy(dx, dy);
+            var group = Selection.OfType<IMovable>().ToArray();
+            (dx, dy) = Movable.Limit(group, dx, dy, CanvasWidth, CanvasHeight);
+            foreach (var item in group) item.MoveBy(dx, dy);
             _last += new Vector(dx, dy);
         }
         InvalidateVisual();
@@ -218,6 +229,7 @@ public sealed class SceneCanvas : Control
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
         base.OnPointerReleased(e);
+        _panning = false; _editHandle = null;
         bool edited = _dragging;
         _dragging = false;
         e.Pointer.Capture(null);
@@ -226,6 +238,7 @@ public sealed class SceneCanvas : Control
     protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
     {
         base.OnPointerCaptureLost(e);
+        _panning = false; _editHandle = null;
         bool edited = _dragging;
         _dragging = false;
         if (edited) EditCompleted?.Invoke();
@@ -237,8 +250,9 @@ public sealed class SceneCanvas : Control
         int step = e.KeyModifiers.HasFlag(KeyModifiers.Shift) ? 10 : 1;
         var delta = e.Key switch { Key.Left => (-step, 0), Key.Right => (step, 0), Key.Up => (0, -step), Key.Down => (0, step), _ => (0, 0) };
         if (delta == (0, 0)) return;
-        var limited = Movable.Limit([movable], delta.Item1, delta.Item2, CanvasWidth, CanvasHeight);
-        movable.MoveBy(limited.Dx, limited.Dy);
+        var group = Selection.OfType<IMovable>().ToArray();
+        var limited = Movable.Limit(group, delta.Item1, delta.Item2, CanvasWidth, CanvasHeight);
+        foreach (var item in group) item.MoveBy(limited.Dx, limited.Dy);
         EditCompleted?.Invoke();
         e.Handled = true;
     }

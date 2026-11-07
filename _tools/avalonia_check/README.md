@@ -15,4 +15,6 @@ To test the actual workspace, object commands, stored-frame scrubbing, probe rec
 xvfb-run -a dotnet _tools/avalonia_check/bin/Release/net10.0/AvaloniaCheck.dll --workspace
 ```
 
+It also checks vector icons, clipboard paste/undo, floating/tabbed panes, themes, language resources, UI scaling, background stepping, reduced-quality previews, full-quality export reruns, video/image-sequence encoders, and optional ffmpeg MP4 / ImageMagick TIFF support. Settings are isolated in a temporary directory.
+
 This mode also fails on binding warnings/errors and writes `/tmp/wavedude-linux-workspace.png`. Native file-picker dialogs and pointer dragging are not automated by these checks.

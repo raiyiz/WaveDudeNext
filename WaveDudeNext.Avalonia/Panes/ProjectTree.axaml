@@ -13,7 +13,7 @@
         </Border>
 
         <TreeView x:Name="ProjectTreeView"
-                  Grid.Row="1"
+                  SelectionMode="Multiple" Grid.Row="1"
                   Margin="4"/>
 
     </Grid>

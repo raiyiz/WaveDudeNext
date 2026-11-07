@@ -56,6 +56,8 @@ public partial class MainWindow
     private DispatcherTimer _editTimer = null!;
     private readonly System.Collections.Generic.List<ColorScheme> _builtInSchemes = ColorSchemeStore.LoadBuiltIn(null);
     private object? _selectedObject;
+    private readonly System.Collections.Generic.List<object> _selection = new();
+    private bool _syncingSelection;
 
     private void InitializeWorkspace()
     {
@@ -64,9 +66,9 @@ public partial class MainWindow
         {
             if (_frames is null || _frames.Count == 0) return;
             int next = _viewFrame + 1;
-            if (next >= _frames.Count)
+            if (next > Math.Min(_playOut ?? _frames.Count - 1, _frames.Count - 1))
             {
-                if (LoopPlayback.IsChecked == true) next = 0;
+                if (LoopPlayback.IsChecked == true) next = _playIn;
                 else { StopPlayback(); return; }
             }
             ShowStoredFrame(next);
@@ -78,13 +80,34 @@ public partial class MainWindow
             _editTimer.Stop();
             if (AutoApply.IsChecked == true) ApplyPendingChanges();
         };
-        ProjectTreeControl.SelectedModelChanged += SelectObject;
+        ProjectTreeControl.SelectedModelsChanged += models =>
+        {
+            if (_syncingSelection) return;
+            _selection.Clear(); _selection.AddRange(models);
+            UpdateSelection(ProjectTreeControl.SelectedModel);
+        };
         foreach (var canvas in new[] { FieldCanvas, IntensityCanvas })
         {
-            canvas.SelectionRequested += model => { ProjectTreeControl.SelectModel(model); SelectObject(model); };
+            canvas.SelectionRequested += (model, toggle) =>
+            {
+                if (!toggle && (model is null || !_selection.Contains(model))) _selection.Clear();
+                if (model is not null)
+                {
+                    if (toggle && _selection.Contains(model)) _selection.Remove(model);
+                    else if (!_selection.Contains(model)) _selection.Add(model);
+                }
+                _syncingSelection = true;
+                ProjectTreeControl.SelectModel(model);
+                _syncingSelection = false;
+                UpdateSelection(model);
+            };
             canvas.EditCompleted += () => { if (AutoApply.IsChecked == true) ApplyPendingChanges(); };
         }
         AddHandler(KeyDownEvent, OnWorkspaceKeyDown, RoutingStrategies.Bubble);
+        InitializeDesktop();
+        InitializeDrop();
+        FieldCanvas.ViewChanged += () => FieldImage.RenderTransform = new global::Avalonia.Media.MatrixTransform(FieldCanvas.ImageTransform);
+        IntensityCanvas.ViewChanged += () => IntensityImage.RenderTransform = new global::Avalonia.Media.MatrixTransform(IntensityCanvas.ImageTransform);
         PopulateExamples();
         // Open a real editable project at startup, rather than the original unattached engine demo.
         var project = new Project();
@@ -98,11 +121,19 @@ public partial class MainWindow
 
     private void SelectObject(object? model)
     {
+        if (_syncingSelection) return;
+        _selection.Clear();
+        if (model is not null) _selection.Add(model);
+        UpdateSelection(model);
+    }
+    private void UpdateSelection(object? model)
+    {
         _selectedObject = model;
         PropertiesEditor.SelectedObject = model;
         foreach (var canvas in new[] { FieldCanvas, IntensityCanvas })
         {
             canvas.SelectedObject = model;
+            canvas.Selection = _selection;
             canvas.InvalidateVisual();
         }
     }
@@ -112,6 +143,7 @@ public partial class MainWindow
         LoadSimulation(project, path is null ? null : Path.GetDirectoryName(path));
         _loadedProject = project;
         _projectPath = path;
+        if (path is not null) RememberProject(path);
         PropertiesEditor.Project = project;
         PropertiesEditor.ProjectFolder = path is null ? null : Path.GetDirectoryName(path);
         ProjectTreeControl.LoadProject(project);
@@ -163,21 +195,23 @@ public partial class MainWindow
     private void Duplicate_Click(object? sender, RoutedEventArgs e)
     {
         if (_loadedProject is not { } p) return;
-        object? copy = _selectedObject switch
+        var copies = _selection.ToArray().Select(item => item switch
         {
-            Source source => p.Duplicate(source), OpticalPart part => p.Duplicate(part),
+            Source source => (object)p.Duplicate(source), OpticalPart part => p.Duplicate(part),
             Probe probe => p.Duplicate(probe), ColorScheme scheme => p.Duplicate(scheme), _ => null
-        };
-        if (copy is not null) FinishObjectEdit(copy);
+        }).Where(item => item is not null).Cast<object>().ToArray();
+        if (copies.Length > 0) { FinishObjectEdit(copies[^1]); _selection.Clear(); _selection.AddRange(copies); UpdateSelection(copies[^1]); }
     }
     private void Delete_Click(object? sender, RoutedEventArgs e)
     {
         if (_loadedProject is not { } p) return;
-        bool removed = _selectedObject switch
-        {
-            Source source => p.Remove(source), OpticalPart part => p.Remove(part),
-            Probe probe => p.Remove(probe), ColorScheme scheme => p.Remove(scheme), _ => false
-        };
+        bool removed = false;
+        foreach (object item in _selection.ToArray())
+            removed |= item switch
+            {
+                Source source => p.Remove(source), OpticalPart part => p.Remove(part),
+                Probe probe => p.Remove(probe), ColorScheme scheme => p.Remove(scheme), _ => false
+            };
         if (removed) FinishObjectEdit(null);
     }
     private void MoveObject_Click(object? sender, RoutedEventArgs e)
@@ -219,17 +253,21 @@ public partial class MainWindow
     private void ResetTimeline()
     {
         StopPlayback();
+        _playIn = 0; _playOut = null;
         _frames?.Dispose();
         _frames = FrameStore.Create(Path.Combine(Path.GetTempPath(), "wavedude-" + Guid.NewGuid().ToString("N") + ".frames"),
-            _engine.Width, _engine.Height, FrameLayers.Field | FrameLayers.Intensity,
-            (_runSteps + _visualizeEvery - 1) / _visualizeEvery + 1, _visualizeEvery, 128L * 1024 * 1024);
-        _samples = new Half[_engine.Width * _engine.Height];
+            new WaveDudeNext.Engine.FrameShape(_engine.Width, _engine.Height, _quality.ResolutionDivisor, _quality.Format,
+                (float)_previewProject!.Display.Field.Brightness, (float)_previewProject.Display.Intensity.Brightness), FrameLayers.Field | FrameLayers.Intensity,
+            (_runSteps + StoredEvery - 1) / StoredEvery + 1, StoredEvery, Math.Min(128L * 1024 * 1024, FrameMemory.Budget(10)));
+        _samples = new Half[_frames.Width * _frames.Height];
+        _indices = new byte[_samples.Length];
         _pixels = new int[_samples.Length];
         var probeSpecs = _previewProject!.Probes.Where(probe => probe.Active).Select(ProbeSpec.From).ToArray();
         var sampler = ProbeSampler.Build(probeSpecs, _engine.Width, _engine.Height, _engine.Rim);
         _engine.SetProbes(sampler);
         _probeCollector = new ProbeCollector(sampler);
         _probeTraces.Clear();
+        FieldCanvas.ProfileFrameStride = IntensityCanvas.ProfileFrameStride = 1;
         for (int i = 0; i < probeSpecs.Length; i++) _probeTraces[probeSpecs[i].Origin!] = _probeCollector.Traces[i];
         FieldCanvas.Traces = IntensityCanvas.Traces = _probeTraces;
         FieldCanvas.Layer = ProbeLayer.Field;
@@ -243,6 +281,10 @@ public partial class MainWindow
         _settingTimeline = false;
     }
     private void CaptureFrame()
+    {
+        lock (_engineGate) CaptureFrameCore();
+    }
+    private void CaptureFrameCore()
     {
         _engine.PrepareFrame(true, true);
         if (_frames is null || _lastCapturedStep == _step) return;
@@ -266,7 +308,7 @@ public partial class MainWindow
         if (_frames is not { Count: > 0 } frames || _previewProject is not { } project) return;
         _viewFrame = Math.Clamp(frame, 0, frames.Count - 1);
         FieldCanvas.Frame = IntensityCanvas.Frame = _viewFrame;
-        FieldCanvas.Step = IntensityCanvas.Step = Math.Min(_viewFrame * _visualizeEvery, _runSteps);
+        FieldCanvas.Step = IntensityCanvas.Step = Math.Min(_viewFrame * StoredEvery, _runSteps);
         FieldCanvas.TotalSteps = IntensityCanvas.TotalSteps = _runSteps;
         DrawStoredPlane(_fieldBitmap, FrameLayer.Field, project.Display.Field, ref _fieldLut);
         DrawStoredPlane(_intensityBitmap, FrameLayer.Intensity, project.Display.Intensity, ref _intensityLut);
@@ -277,24 +319,27 @@ public partial class MainWindow
         _settingTimeline = true;
         TimelineSlider.Value = _viewFrame;
         _settingTimeline = false;
-        FrameText.Text = $"Frame {_viewFrame + 1} / {frames.Count}  ·  Step {Math.Min(_viewFrame * _visualizeEvery, _runSteps)}";
+        FrameText.Text = $"Frame {_viewFrame + 1} / {frames.Count}  ·  {frames.Width} × {frames.Height}, {(_quality.Format == WaveDudeNext.Engine.FrameFormat.Index ? "8-bit" : "16-bit")}  ·  RAM {frames.FramesInMemory}, disk {frames.FramesOnDisk}{(frames.RamFrames < frames.Capacity ? " (disk cache required)" : "")}  ·  Step {Math.Min(_viewFrame * StoredEvery, _runSteps)}";
     }
     private void DrawStoredPlane(WriteableBitmap bitmap, FrameLayer layer, DisplayLayer display, ref ColorLut? lut)
     {
-        if (_frames is null || !_frames.CopyLayer(_viewFrame, layer, _samples.AsSpan())) return;
+        if (_frames is null) return;
+        if (_frames.Format == WaveDudeNext.Engine.FrameFormat.Index) { if (!_frames.CopyLayer(_viewFrame, layer, _indices.AsSpan())) return; }
+        else if (!_frames.CopyLayer(_viewFrame, layer, _samples.AsSpan())) return;
         if (lut is null)
         {
             var scheme = ColorSchemeStore.Find(_previewProject!.ColorSchemes, display.ColorScheme)
                 ?? ColorSchemeStore.Find(_builtInSchemes, display.ColorScheme);
             lut = scheme is null ? ColorLut.Grey : ColorLut.Build(scheme, display.BlackLevel);
         }
-        FrameRenderer.Render(_samples, _engine.Width, _engine.Height, lut,
+        if (_frames.Format == WaveDudeNext.Engine.FrameFormat.Index) FrameRenderer.RenderIndexed(_indices, _frames.Width, _frames.Height, lut, _pixels);
+        else FrameRenderer.Render(_samples, _frames.Width, _frames.Height, lut,
             ((IFrameSource)_frames).KindOf(layer), (float)display.Brightness, _pixels);
-        if (display.Overlay && _overlayEdges is not null)
-            GlowingEdges.BlendAdditive(_pixels, _engine.Width, _engine.Height, _overlayEdges, display.OverlayGain);
+        if (display.Overlay && PreviewEdges() is { } edges)
+            GlowingEdges.BlendAdditive(_pixels, _frames.Width, _frames.Height, edges, display.OverlayGain);
         using var target = bitmap.Lock();
-        for (int y = 0; y < _engine.Height; y++)
-            Marshal.Copy(_pixels, y * _engine.Width, target.Address + y * target.RowBytes, _engine.Width);
+        for (int y = 0; y < _frames.Height; y++)
+            Marshal.Copy(_pixels, y * _frames.Width, target.Address + y * target.RowBytes, _frames.Width);
     }
     private void Timeline_Changed(object? sender, RangeBaseValueChangedEventArgs e)
     {
@@ -318,19 +363,21 @@ public partial class MainWindow
         if (_playbackTimer.IsEnabled) { StopPlayback(); return; }
         if (_frames is not { Count: > 1 }) return;
         _timer.Stop();
-        if (_viewFrame == _frames.Count - 1) ShowStoredFrame(0);
+        if (_viewFrame < _playIn || _viewFrame >= Math.Min(_playOut ?? _frames.Count - 1, _frames.Count - 1)) ShowStoredFrame(_playIn);
         double fps = _loadedProject?.Display.Video.Fps ?? 30;
-        _playbackTimer.Interval = TimeSpan.FromSeconds(1 / (fps * (double)(PlaybackSpeed.Value ?? 1)));
+        _playbackTimer.Interval = TimeSpan.FromSeconds(_quality.FrameDivisor / (fps * (double)(PlaybackSpeed.Value ?? 1)));
         _playbackTimer.Start();
-        PlayButton.Content = "Ⅱ Pause";
+        PlayButton.Content = Controls.IconView.Label("Pause", "Pause");
     }
     private void StopPlayback()
     {
         _playbackTimer?.Stop();
-        if (PlayButton is not null) PlayButton.Content = "▶ Play";
+        if (PlayButton is not null) PlayButton.Content = Controls.IconView.Label("Play", "Play");
     }
     private async void ExportFrame_Click(object? sender, RoutedEventArgs e)
     {
+        _timer.Stop(); _editTimer.Stop(); StopPlayback();
+        await _backgroundTask;
         try
         {
             bool intensity = (sender as Control)?.Tag?.ToString() == "Intensity";
@@ -341,9 +388,19 @@ public partial class MainWindow
                 FileTypeChoices = [new FilePickerFileType("PNG image") { Patterns = ["*.png"] }]
             });
             if (file is null) return;
+            // Save the rendered frame at canvas resolution, with export decorations.
+            _timer.Stop();
+            var bitmap = intensity ? _intensityBitmap : _fieldBitmap;
+            var size = bitmap.PixelSize;
+            var pixels = new int[size.Width * size.Height];
+            using (var source = bitmap.Lock())
+                for (int y = 0; y < size.Height; y++) Marshal.Copy(source.Address + y * source.RowBytes, pixels, y * size.Width, size.Width);
+            if (_loadedProject is { } project && size.Width == _engine.Width && size.Height == _engine.Height)
+                Rendering.ExportDecoration.Draw(project, _probeTraces, intensity ? ProbeLayer.Intensity : ProbeLayer.Field,
+                    size.Width, size.Height, _viewFrame, Math.Min(_viewFrame * StoredEvery, _runSteps), _runSteps, pixels);
             await using var stream = await file.OpenWriteAsync();
             stream.SetLength(0);
-            (intensity ? _intensityBitmap : _fieldBitmap).Save(stream, PngBitmapEncoderOptions.Default);
+            PngEncoder.Write(stream, pixels, size.Width, size.Height);
             StatusText.Text = "Frame exported: " + file.Name;
         }
         catch (Exception ex) { StatusText.Text = "Could not export frame: " + ex.Message; }
@@ -369,7 +426,7 @@ public partial class MainWindow
             await using var stream = await file.OpenWriteAsync();
             stream.SetLength(0);
             using var writer = new StreamWriter(stream);
-            int rows = ProbeCsv.Write(writer, probe, trace, _visualizeEvery, 1);
+            int rows = ProbeCsv.Write(writer, probe, trace, StoredEvery, 1);
             StatusText.Text = $"Exported {rows} probe rows to {file.Name}";
         }
         catch (Exception ex) { StatusText.Text = "Could not export probe: " + ex.Message; }
@@ -414,6 +471,8 @@ public partial class MainWindow
             if (await ConfirmProjectReplacement()) { _allowClose = true; Close(); }
             return;
         }
+        _closingWorkspace = true;
+        DockAll_Click(this, new());
         base.OnClosing(e);
     }
     private void OnWorkspaceKeyDown(object? sender, KeyEventArgs e)
@@ -430,6 +489,10 @@ public partial class MainWindow
         else if (ctrl && e.Key == Key.N) NewProject_Click(this, new RoutedEventArgs());
         else if (!editing && ctrl && e.Key == Key.Z) Undo_Click(this, new RoutedEventArgs());
         else if (!editing && ctrl && e.Key == Key.Y) Redo_Click(this, new RoutedEventArgs());
+        else if (!editing && ctrl && e.Key == Key.C) Copy_Click(this, new());
+        else if (!editing && ctrl && e.Key == Key.X) Cut_Click(this, new());
+        else if (!editing && ctrl && e.Key == Key.V) Paste_Click(this, new());
+        else if (e.Key == Key.F1) Manual_Click(this, new());
         else if (!editing && ctrl && e.Key == Key.D) Duplicate_Click(this, new RoutedEventArgs());
         else if (!editing && e.Key == Key.Delete) Delete_Click(this, new RoutedEventArgs());
         else if (e.Key == Key.F5) Start_Click(this, new RoutedEventArgs());

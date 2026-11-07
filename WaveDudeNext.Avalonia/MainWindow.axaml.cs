@@ -48,7 +48,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _sceneImageWatch = new SceneImageWatch(message => StatusText.Text = message);
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
-        _timer.Tick += (_, _) => UpdateSimulation();
+        _timer.Tick += async (_, _) => { _backgroundTask = UpdateBackground(); await _backgroundTask; };
         InitializeWorkspace();
         Closed += (_, _) =>
         {
@@ -58,7 +58,8 @@ public partial class MainWindow : Window
             _frames?.Dispose();
             _sceneImageWatch.Dispose();
             _projectWatcher?.Dispose();
-            (_engine as IDisposable)?.Dispose();
+            CancelStepping();
+            lock (_engineGate) (_engine as IDisposable)?.Dispose();
             _fieldBitmap.Dispose();
             _intensityBitmap.Dispose();
         };
@@ -174,6 +175,7 @@ public partial class MainWindow : Window
             _projectHistory?.Record();
             _projectHistory?.MarkSaved();
             _projectPath = path;
+            RememberProject(path);
             PropertiesEditor.ProjectFolder = Path.GetDirectoryName(path);
             _sceneImageWatch.Attach(_loadedProject.Scene, PropertiesEditor.ProjectFolder, refresh: false);
             StatusText.Text = $"Saved: {Path.GetFileName(path)}";
@@ -209,7 +211,8 @@ public partial class MainWindow : Window
 		    // Save the edited project state as an undo step.
 		    _projectHistory?.Record();
 
-		    if (_needsSimulationRebuild)
+		    if (_needsSimulationRebuild || (_frames?.Format == FrameFormat.Index &&
+                (_frames.Shape.FieldBrightness != (float)_loadedProject.Display.Field.Brightness || _frames.Shape.IntensityBrightness != (float)_loadedProject.Display.Intensity.Brightness)))
 		    {
 		        // Recreates the optical scene and GPU engine.
 		        LoadSimulation(_loadedProject);
@@ -300,6 +303,11 @@ public partial class MainWindow : Window
 	
 	
 	private void LoadSimulation(Project project, string? projectFolder = null)
+    {
+        CancelStepping();
+        lock (_engineGate) LoadSimulationCore(project, projectFolder);
+    }
+    private void LoadSimulationCore(Project project, string? projectFolder)
 	{
 		
         var paintedScene = SceneImageLoader.Compose(project, projectFolder ?? PropertiesEditor.ProjectFolder);
@@ -337,7 +345,8 @@ public partial class MainWindow : Window
 		);
 
 		// Create the new frame buffers before replacing the old ones.
-		var size = new PixelSize(spec.Width, spec.Height);
+		var shape = new FrameShape(spec.Width, spec.Height, _quality.ResolutionDivisor, _quality.Format, 1, 1);
+        var size = new PixelSize(shape.Width, shape.Height);
 		var dpi = new Vector(96, 96);
 
 		var newFieldBitmap = new WriteableBitmap(
@@ -403,7 +412,8 @@ public partial class MainWindow : Window
         if (_hasPendingChanges) ApplyPendingChanges();
         if (_step >= _runSteps)
         {
-            _engine.Reset();
+            CancelStepping();
+            lock (_engineGate) _engine.Reset();
             _step = 0;
             ResetTimeline();
             RenderFrame();
@@ -415,13 +425,15 @@ public partial class MainWindow : Window
         global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         _timer.Stop();
+        _stepCancel?.Cancel();
     }
 
     private void Reset_Click(object? sender,
         global::Avalonia.Interactivity.RoutedEventArgs e)
     {
         _timer.Stop();
-        _engine.Reset();
+        CancelStepping();
+        lock (_engineGate) _engine.Reset();
         _step = 0;
         ResetTimeline();
         RenderFrame();
@@ -515,7 +527,7 @@ public partial class MainWindow : Window
     private void UpdateSimulation()
     {
         int steps = _runSteps;
-        int interval = _visualizeEvery;
+        int interval = StoredEvery;
         int count = Math.Min(interval, Math.Max(0, steps - _step));
         for (int i = 0; i < count; i++)
         {

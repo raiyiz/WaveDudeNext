@@ -70,8 +70,8 @@ version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
 							<CheckBox Margin="6,0,0,2" VerticalAlignment="Center" IsChecked="{Binding Smooth, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.FiberNode.Smooth}">
 								<TextBlock Text="{DynamicResource Label.FiberNode.Smooth}" />
 							</CheckBox>
-							<Button Content="×" Padding="5,0" ToolTip.Tip="{DynamicResource TipRemoveNode}" AutomationProperties.Name="{DynamicResource TipRemoveNode}"
-							        Click="OnRemoveNode" />
+							<Button Padding="5,0" ToolTip.Tip="{DynamicResource TipRemoveNode}" AutomationProperties.Name="{DynamicResource TipRemoveNode}"
+							        Click="OnRemoveNode" ><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Delete"/></StackPanel></Button>
 						</StackPanel>
 						<TextBlock Grid.Row="1" Grid.Column="0" Classes="formLabel" Text="{DynamicResource LabelNodeIn}" />
 						<NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,0,2,2" Value="{Binding InX, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.FiberNode.InX}"  Minimum="-2147483648" Maximum="2147483647"/>
@@ -84,8 +84,8 @@ version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
 			</ItemsControl.ItemTemplate>
 		</ItemsControl>
 		<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-			<Button Padding="8,2" Margin="0,2,6,0" Content="{DynamicResource ButtonAddNode}" ToolTip.Tip="{DynamicResource TipAddNode}"
-			        Click="OnAddNode" AutomationProperties.AutomationId="PartAddNode" />
+			<Button Padding="8,2" Margin="0,2,6,0" ToolTip.Tip="{DynamicResource TipAddNode}"
+			        Click="OnAddNode" AutomationProperties.AutomationId="PartAddNode" ><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="PlusBadge"/><TextBlock Text="{DynamicResource ButtonAddNode}"/></StackPanel></Button>
 		</StackPanel>
 	</StackPanel>
 </UserControl>

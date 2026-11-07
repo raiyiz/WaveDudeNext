@@ -29,6 +29,8 @@ using WaveDudeNext.Avalonia.Rendering;
 using WaveDudeNext.Avalonia.Views;
 using WaveDudeNext.Model;
 
+Environment.SetEnvironmentVariable("WAVEDUDE_DESKTOP_SETTINGS", Path.Combine(Path.GetTempPath(), "wavedude-check-" + Guid.NewGuid().ToString("N"), "desktop.json"));
+
 if (args.Contains("--workspace"))
 {
     global::Avalonia.Logging.Logger.Sink = new EditorLog();
@@ -252,6 +254,7 @@ sealed class WorkspaceCheckApp : App
                     var method = typeof(MainWindow).GetMethod(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
                     method.Invoke(window, method.GetParameters().Length == 0 ? null : [sender ?? window, new RoutedEventArgs()]);
                 }
+                Invoke("PreviewQuality_Click", new MenuItem { Tag = "Full" });
                 var project = (Project)Field("_loadedProject")!;
                 Check(project.Sources.Count == 1, "Startup is an editable project");
                 window.FindControl<CheckBox>("AutoApply")!.IsChecked = false;
@@ -307,6 +310,80 @@ sealed class WorkspaceCheckApp : App
                 using var shot = new global::Avalonia.Media.Imaging.RenderTargetBitmap(new PixelSize((int)window.Bounds.Width, (int)window.Bounds.Height));
                 shot.Render(window);
                 shot.Save("/tmp/wavedude-linux-workspace.png", global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
+                Check(window.GetVisualDescendants().OfType<WaveDudeNext.Avalonia.Controls.IconView>().Count() >= 15, "Toolbar and playback icons render as vector controls");
+                Invoke("MarkIn_Click");
+                Check((int)Field("_playIn")! == (int)Field("_viewFrame")!, "Playback in point follows the current frame");
+                Invoke("ClearRange_Click");
+                Check((int)Field("_playIn")! == 0 && Field("_playOut") is null, "Playback range resets to the complete recording");
+                Invoke("TabbedPreviews_Click");
+                Check(Field("_previewTabs") is TabControl, "Previews can be tabbed");
+                Invoke("SideBySide_Click");
+                Check(Field("_previewTabs") is null && field.IsAttachedToVisualTree(), "Tabbed previews dock back side by side");
+                Invoke("FloatPane_Click", new MenuItem { Tag = "Properties" });
+                Check(window.FindControl<Border>("PropertiesHost")!.Child is null, "Properties pane floats into a separate window");
+                Invoke("DockAll_Click");
+                Check(window.FindControl<Border>("PropertiesHost")!.Child is not null, "Floating pane docks back without losing its content");
+                Invoke("Theme_Click", new MenuItem { Tag = "Light" });
+                Check(window.RequestedThemeVariant == global::Avalonia.Styling.ThemeVariant.Light, "Theme switching applies to the workspace");
+                Invoke("Theme_Click", new MenuItem { Tag = "Dark" });
+                Invoke("Language_Click", new MenuItem { Tag = "DE" });
+                Check(global::Avalonia.Application.Current!.TryFindResource("MenuFile", out var translated) && (string)translated! == "_Datei", "Language switching loads WPF German resources");
+                Invoke("Language_Click", new MenuItem { Tag = "EN" });
+                Invoke("UiZoom_Click", new MenuItem { Tag = "1.25" });
+                Check(window.FindControl<LayoutTransformControl>("WorkspaceScale")!.LayoutTransform is global::Avalonia.Media.ScaleTransform scale && scale.ScaleX == 1.25, "UI scale can be changed");
+                Invoke("UiZoom_Click", new MenuItem { Tag = "1" });
+                var tree = window.FindControl<WaveDudeNext.Avalonia.Panes.ProjectTree>("ProjectTreeControl")!;
+                tree.SelectModel(project.Parts[0]);
+                int partCount = project.Parts.Count;
+                Invoke("Copy_Click"); await Task.Delay(150);
+                Invoke("Paste_Click"); await Task.Delay(150);
+                Check(project.Parts.Count == partCount + 1, "System clipboard copies and pastes optical parts");
+                Invoke("Undo_Click");
+                Check(project.Parts.Count == partCount, "Clipboard paste is undoable");
+                var background = (Task)typeof(MainWindow).GetMethod("UpdateBackground", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(window, null)!;
+                await background;
+                Check((int)Field("_step")! > 0, "Background stepping publishes completed steps");
+                Invoke("PreviewQuality_Click", new MenuItem { Tag = "Economy" });
+                Invoke("UpdateSimulation");
+                var reduced = (FrameStore)Field("_frames")!;
+                Check(reduced.Width == project.Scene.Width / 2 && reduced.Format == WaveDudeNext.Engine.FrameFormat.Index, "Economy preview stores half-resolution 8-bit frames");
+                Check(window.FindControl<Image>("FieldImage")!.Source!.Size.Width == reduced.Width, "Reduced preview bitmap matches the stored dimensions");
+                Invoke("PreviewQuality_Click", new MenuItem { Tag = "Full" });
+                project.Simulation.Steps = 12;
+                var prepare = typeof(MainWindow).GetMethod("PrepareExportFrames", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+                using var fullExport = await (Task<FrameStore?>)prepare.Invoke(window, new object[] { true, "Export verification" })!;
+                Check(fullExport is { Count: > 0, IntensityRoot: true } && fullExport.Width == project.Scene.Width, "Export rerun produces full-resolution half-float frames");
+                string exportFolder = Path.Combine(Path.GetTempPath(), "wavedude-export-check-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(exportFolder);
+                foreach (var exportFormat in new[] { WaveDudeNext.Export.ExportFormat.Png, WaveDudeNext.Export.ExportFormat.Jpeg, WaveDudeNext.Export.ExportFormat.ExrRoot, WaveDudeNext.Export.ExportFormat.Avi, WaveDudeNext.Export.ExportFormat.Mov, WaveDudeNext.Export.ExportFormat.MovPng, WaveDudeNext.Export.ExportFormat.Mpeg1 })
+                {
+                    string destination = Path.Combine(exportFolder, exportFormat + WaveDudeNext.Export.ExportFormats.Extension(exportFormat));
+                    var exportLayer = new WaveDudeNext.Export.ExportLayer(FrameLayer.Field, WaveDudeNext.Rendering.ColorLut.Grey, 1, null, 0, null);
+                    var exportTarget = new WaveDudeNext.Export.ExportTarget(exportLayer, destination,
+                        () => WaveDudeNext.Export.ExportFormats.Open(exportFormat, destination, fullExport!.Width, fullExport.Height, 30, 85, 2));
+                    var exportJob = new WaveDudeNext.Export.ExportJob(fullExport!, 0, 1, new[] { exportTarget }, null);
+                    exportJob.Start(); await exportJob.Completion;
+                    Check(exportJob.State == WaveDudeNext.Export.ExportState.Completed, exportFormat + " export writes recorded frames: " + exportJob.Error);
+                }
+                if (WaveDudeNext.Avalonia.Rendering.FfmpegSink.IsAvailable)
+                {
+                    string mp4 = Path.Combine(exportFolder, "recording.mp4");
+                    using (var writer = new WaveDudeNext.Avalonia.Rendering.FfmpegSink(mp4, 16, 16, 30, 80))
+                    { writer.Add(new int[256]); writer.Add(new int[256]); }
+                    Check(new FileInfo(mp4).Length > 0, "ffmpeg writes a portable MP4 recording");
+                }
+                if (WaveDudeNext.Avalonia.Rendering.FfmpegSink.FindExecutable("convert") is { } converter)
+                {
+                    var conversion = new System.Diagnostics.ProcessStartInfo(converter) { RedirectStandardOutput = true, UseShellExecute = false };
+                    foreach (string argument in new[] { "-size", "2x1", "xc:red", "tiff:-" }) conversion.ArgumentList.Add(argument);
+                    using var process = System.Diagnostics.Process.Start(conversion)!;
+                    using var tiff = new MemoryStream();
+                    await process.StandardOutput.BaseStream.CopyToAsync(tiff); await process.WaitForExitAsync();
+                    var decoded = SceneImageLoader.Load(tiff.ToArray());
+                    Check(decoded.Width == 2 && decoded.Height == 1 && decoded.Bgra[2] == 255, "Optional ImageMagick decoder preserves TIFF scene pixels");
+                }
+                using var rawExport = await (Task<FrameStore?>)prepare.Invoke(window, new object[] { false, "Raw intensity verification" })!;
+                Check(rawExport is { IntensityRoot: false, Count: > 0 }, "Raw OpenEXR rerun records intensity without square-root compression");
                 Check(EditorLog.Errors.Count == 0, "Workspace has no binding warnings or errors: " + string.Join("; ", EditorLog.Errors));
                 Console.WriteLine("Workspace smoke checks passed. Screenshot: /tmp/wavedude-linux-workspace.png");
                 typeof(MainWindow).GetField("_allowClose", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(window, true);

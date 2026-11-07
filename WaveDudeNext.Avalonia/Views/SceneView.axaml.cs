@@ -110,7 +110,7 @@ public partial class SceneView : UserControl
                 AllowMultiple = false,
                 FileTypeFilter = [new FilePickerFileType("Images")
                 {
-                    Patterns = ["*.png", "*.bmp", "*.jpg", "*.jpeg", "*.gif", "*.webp"]
+                    Patterns = ["*.png", "*.bmp", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.tif", "*.tiff", "*.ico", "*.jxr", "*.wdp"]
                 }]
             });
             if (files.Count == 0) return;

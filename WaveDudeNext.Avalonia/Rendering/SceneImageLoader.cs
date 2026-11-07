@@ -55,8 +55,8 @@ public static class SceneImageLoader
     public static ScenePixels Load(byte[] bytes)
     {
         using var stream = new MemoryStream(bytes, writable: false);
-        using var codec = SKCodec.Create(stream)
-            ?? throw new InvalidDataException("The file is not a supported image.");
+        using var codec = SKCodec.Create(stream);
+        if (codec is null) return LoadConverted(bytes);
         var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Bgra8888, SKAlphaType.Unpremul);
         int stride = checked(info.Width * 4);
         var bgra = new byte[checked(stride * info.Height)];
@@ -71,5 +71,33 @@ public static class SceneImageLoader
             handle.Free();
         }
         return new ScenePixels(info.Width, info.Height, stride, bgra);
+    }
+    private static ScenePixels LoadConverted(byte[] bytes)
+    {
+        string? executable = FfmpegSink.FindExecutable("magick") ?? FfmpegSink.FindExecutable("convert");
+        if (executable is null) throw new InvalidDataException("This image format needs ImageMagick. Install it or convert the image to PNG.");
+        var start = new System.Diagnostics.ProcessStartInfo(executable)
+        {
+            UseShellExecute = false, RedirectStandardInput = true, RedirectStandardOutput = true,
+            RedirectStandardError = true, CreateNoWindow = true
+        };
+        foreach (string argument in new[] { "-", "-depth", "8", "png32:-" }) start.ArgumentList.Add(argument);
+        using var process = System.Diagnostics.Process.Start(start) ?? throw new InvalidDataException("Could not start ImageMagick.");
+        using var output = new MemoryStream();
+        var read = process.StandardOutput.BaseStream.CopyToAsync(output);
+        var errors = process.StandardError.ReadToEndAsync();
+        var write = System.Threading.Tasks.Task.Run(async () =>
+        {
+            await process.StandardInput.BaseStream.WriteAsync(bytes);
+            process.StandardInput.Close();
+        });
+        if (!process.WaitForExit(30000)) { process.Kill(true); throw new InvalidDataException("Image decoding timed out."); }
+        System.Threading.Tasks.Task.WhenAll(read, write).GetAwaiter().GetResult();
+        string error = errors.GetAwaiter().GetResult();
+        if (process.ExitCode != 0) throw new InvalidDataException("Image decoding failed: " + error);
+        byte[] png = output.ToArray();
+        using var check = SKCodec.Create(new MemoryStream(png));
+        if (check is null) throw new InvalidDataException("The image converter returned an invalid PNG.");
+        return Load(png);
     }
 }
