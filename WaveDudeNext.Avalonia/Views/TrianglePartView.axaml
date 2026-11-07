@@ -1,0 +1,70 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.TrianglePartView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:views="using:WaveDudeNext.Avalonia.Views"
+             xmlns:model="using:WaveDudeNext.Model"
+             Classes="wpfEditor" x:CompileBindings="False">
+
+	<UserControl.Resources>
+        <converters:ConditionConverter x:Key="Condition"/>
+		<converters:TriangleApexConverter x:Key="ApexAngle" />
+		<!-- the presets fix the angles: A is typed for the isosceles and custom types, B for custom only -->
+
+
+	</UserControl.Resources>
+		<StackPanel Margin="8">
+			<views:PartCommonView />
+			<views:ShapeMaterialView />
+
+			<Label Classes="formSection" Content="{DynamicResource SectionShape}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.TrianglePart.Type}" />
+				<ComboBox Classes="enumComboBox" ItemsSource="{x:Static controls:EnumItems.TriangleType}"
+				          SelectedItem="{Binding Type, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.TrianglePart.Type}" AutomationProperties.AutomationId="PartTriangleType" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.TrianglePart.Base}" />
+				<NumericUpDown Value="{Binding Base, Mode=TwoWay}" Minimum="2" Increment="10" ToolTip.Tip="{DynamicResource Hint.TrianglePart.Base}" AutomationProperties.AutomationId="PartBase"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.TrianglePart.AngleA}" />
+				<NumericUpDown IsEnabled="{Binding Type, Converter={StaticResource Condition}, ConverterParameter='False;Isosceles=True;Custom=True'}" Value="{Binding AngleA, Mode=TwoWay}" Minimum="1" Maximum="178" ToolTip.Tip="{DynamicResource Hint.TrianglePart.AngleA}" AutomationProperties.AutomationId="PartAngleA" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.TrianglePart.AngleB}" />
+				<NumericUpDown IsEnabled="{Binding Type, Converter={StaticResource Condition}, ConverterParameter='False;Custom=True'}" Value="{Binding AngleB, Mode=TwoWay}" Minimum="1" Maximum="178" ToolTip.Tip="{DynamicResource Hint.TrianglePart.AngleB}" AutomationProperties.AutomationId="PartAngleB" />
+
+				<!-- read-only: what the two base angles leave for the apex -->
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelApexAngle}" />
+				<TextBlock Classes="formReadout" ToolTip.Tip="{DynamicResource TipApexAngle}" AutomationProperties.AutomationId="PartApexAngle">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource ApexAngle}">
+							<Binding Path="Type" />
+							<Binding Path="AngleA" />
+							<Binding Path="AngleB" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+			</controls:FormPanel>
+		</StackPanel>
+
+</UserControl>

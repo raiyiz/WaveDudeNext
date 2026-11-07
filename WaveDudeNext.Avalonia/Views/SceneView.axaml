@@ -1,0 +1,108 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.SceneView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:views="using:WaveDudeNext.Avalonia.Views"
+             Classes="wpfEditor" x:CompileBindings="False">
+	<StackPanel Margin="8">
+		<Label Classes="formSection" Content="{DynamicResource SectionCanvas}" />
+		<controls:FormPanel>
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.Scene.Mode}" />
+			<ComboBox Classes="enumComboBox" ItemsSource="{x:Static views:SceneView.SceneModeValues}"
+			          SelectedItem="{Binding Mode, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Scene.Mode}" />
+
+			<TextBlock Classes="formLabel" IsVisible="{Binding Mode, Converter={x:Static views:SceneView.IsImage}}" Text="{DynamicResource Label.Scene.Image}" />
+			<!-- the name of the embedded image (or a legacy path) and three buttons (2026-10-29, the user's design): "…" picks a file
+			     and embeds it, the save glyph (the File menu's) writes the embedded image to a file and changes nothing in the
+			     project, and the X removes the image (2026-10-26, Jeroen's report: there was no way to drop one), leaving a blank
+			     canvas of the image's size; the X is the panes' close glyph in the button's text colour, so it greys with the button -->
+			<!-- a grid in visual order, so Tab walks the name, then "…", save, X (a dock panel's right-docked buttons are declared
+			     right to left and tabbed that way, and a tab index sorts ahead of the whole window) -->
+			<Grid IsVisible="{Binding Mode, Converter={x:Static views:SceneView.IsImage}}">
+				<Grid.ColumnDefinitions>
+					<ColumnDefinition Width="*" />
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="Auto" />
+					<ColumnDefinition Width="Auto" />
+				</Grid.ColumnDefinitions>
+				<TextBox Text="{Binding Image, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip.Tip="{DynamicResource Hint.Scene.Image}" />
+				<Button Grid.Column="1" Margin="4,0,0,0" Padding="8,0" Content="…" ToolTip.Tip="{DynamicResource TipBrowseSceneImage}"
+				        AutomationProperties.Name="{DynamicResource TipBrowseSceneImage}" Click="OnBrowseSceneImage"
+				        AutomationProperties.AutomationId="SceneBrowse" />
+				<Button Grid.Column="2" Margin="4,0,0,0" Padding="5,0" ToolTip.Tip="{DynamicResource TipSaveSceneImage}"
+				        AutomationProperties.Name="{DynamicResource TipSaveSceneImage}" IsEnabled="{Binding ImageData, Converter={x:Static ObjectConverters.IsNotNull}}" Click="OnSaveSceneImage"
+				        AutomationProperties.AutomationId="SceneSaveImage">
+					<Path Data="M 1,1 L 11,1 14,4 14,14 1,14 Z M 4,1 L 4,6 10,6 10,1 M 4,14 L 4,9 11,9 11,14" Width="14" Height="14" Stretch="Uniform" Stroke="{DynamicResource WindowForeground}" StrokeThickness="1"/>
+				</Button>
+				<Button Grid.Column="3" Margin="4,0,0,0" Padding="7,0" ToolTip.Tip="{DynamicResource TipRemoveSceneImage}"
+				        AutomationProperties.Name="{DynamicResource TipRemoveSceneImage}" Click="OnRemoveSceneImage"
+				        AutomationProperties.AutomationId="SceneRemoveImage">
+					<Path Data="M 0,0 L 8,8 M 8,0 L 0,8" StrokeThickness="1.3" Stroke="{DynamicResource WindowForeground}" Width="8" Height="8" Stretch="Uniform" />
+				</Button>
+			</Grid>
+
+			<TextBlock Classes="formLabel" IsVisible="{Binding Mode, Converter={x:Static views:SceneView.IsImage}}" Text="{DynamicResource Label.Scene.ImagePath}" />
+			<!-- the path and, when the file is not on disk, a note (the window checks; the embedded image is what is simulated) -->
+			<DockPanel IsVisible="{Binding Mode, Converter={x:Static views:SceneView.IsImage}}">
+				<TextBlock DockPanel.Dock="Right" Margin="4,0,0,0" VerticalAlignment="Center" Text="{DynamicResource SceneImageNotFound}"
+				           IsVisible="{Binding SceneImageFileMissing, RelativeSource={RelativeSource AncestorType=views:SceneView}}"
+				           AutomationProperties.AutomationId="SceneImageNotFound" />
+				<TextBlock VerticalAlignment="Center" Text="{Binding ImagePath}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{DynamicResource Hint.Scene.ImagePath}"
+				           AutomationProperties.AutomationId="SceneImagePath" />
+			</DockPanel>
+
+			<TextBlock Classes="formLabel" IsVisible="{Binding Mode, Converter={x:Static views:SceneView.IsImage}}" Text="{DynamicResource LabelEmbeddedImage}" />
+			<DockPanel IsVisible="{Binding Mode, Converter={x:Static views:SceneView.IsImage}}">
+				<TextBlock VerticalAlignment="Center" Text="{Binding ImageData, Converter={x:Static views:SceneView.ImageInfo}}"
+				           ToolTip.Tip="{DynamicResource TipEmbeddedImage}" AutomationProperties.AutomationId="SceneImageInfo" />
+			</DockPanel>
+
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.Scene.Width}" />
+			<NumericUpDown IsEnabled="{Binding Mode, Converter={x:Static views:SceneView.IsCanvas}}" Value="{Binding Width, Mode=TwoWay}" Minimum="8" Maximum="16384" ToolTip.Tip="{DynamicResource Hint.Scene.Width}" AutomationProperties.AutomationId="SceneWidth" FormatString="0" ParsingNumberStyle="Integer"/>
+
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.Scene.Height}" />
+			<NumericUpDown IsEnabled="{Binding Mode, Converter={x:Static views:SceneView.IsCanvas}}" Value="{Binding Height, Mode=TwoWay}" Minimum="8" Maximum="16384" ToolTip.Tip="{DynamicResource Hint.Scene.Height}" AutomationProperties.AutomationId="SceneHeight" FormatString="0" ParsingNumberStyle="Integer"/>
+
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.Scene.Edges}" />
+			<ComboBox Classes="enumComboBox" ItemsSource="{x:Static views:SceneView.EdgeModeValues}"
+			          SelectedItem="{Binding Edges, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Scene.Edges}" AutomationProperties.AutomationId="SceneEdges" />
+
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.Scene.DampingEdge}" />
+			<NumericUpDown Value="{Binding DampingEdge, Mode=TwoWay}" Minimum="-8192" Maximum="8192" ToolTip.Tip="{DynamicResource Hint.Scene.DampingEdge}" AutomationProperties.AutomationId="SceneDampingEdge" FormatString="0" ParsingNumberStyle="Integer"/>
+
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.Scene.RefractiveIndex}" />
+			<NumericUpDown Value="{Binding RefractiveIndex, Mode=TwoWay}" Minimum="1" Maximum="2.55" Increment="0.01" ToolTip.Tip="{DynamicResource Hint.Scene.RefractiveIndex}" />
+		</controls:FormPanel>
+
+		<Label Classes="formSection" Content="{DynamicResource SectionImageSources}" />
+		<controls:FormPanel>
+			<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.Scene.ImageSources}"
+			          IsChecked="{Binding ImageSources, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Scene.ImageSources}" />
+
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.Scene.ImageSourceScale}" />
+			<NumericUpDown Value="{Binding ImageSourceScale, Mode=TwoWay}" Minimum="0" Maximum="1000" Increment="0.1" IsEnabled="{Binding ImageSources}" ToolTip.Tip="{DynamicResource Hint.Scene.ImageSourceScale}" />
+
+			<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.Scene.ObjectSources}"
+			          IsChecked="{Binding ObjectSources, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Scene.ObjectSources}" />
+		</controls:FormPanel>
+	</StackPanel>
+</UserControl>

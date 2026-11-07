@@ -1,0 +1,98 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.ColorSchemeView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:commands="using:WaveDudeNext.Avalonia.Commands"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:rendering="using:WaveDudeNext.Rendering" Classes="wpfEditor" x:CompileBindings="False">
+
+	<UserControl.Resources>
+		<converters:ColorSchemeBrushConverter x:Key="ColorSchemeBrush" />
+		<converters:RgbBrushConverter x:Key="RgbBrush" />
+		<StreamGeometry x:Key="MinusGeometry">M0,4 L8,4</StreamGeometry>
+		<!-- the "reduce" step applies to a sampled table only -->
+
+	</UserControl.Resources>
+		<StackPanel Margin="8">
+			<Label Classes="formSection" Content="{DynamicResource SectionGeneral}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.ColorScheme.Name}" />
+				<TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip.Tip="{DynamicResource Hint.ColorScheme.Name}"
+				         AutomationProperties.AutomationId="SchemeName" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.ColorScheme.Kind}" />
+				<ComboBox Classes="enumComboBox" ItemsSource="{x:Static controls:EnumItems.ColorSchemeKind}"
+				          SelectedItem="{Binding Kind, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.ColorScheme.Kind}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.ColorScheme.Description}" />
+				<TextBox Text="{Binding Description, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="False"
+				         ToolTip.Tip="{DynamicResource Hint.ColorScheme.Description}" />
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionStops}" />
+			<!-- start from any existing scheme: picking one copies its stops, kind, category and description into this one -->
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelBasedOn}" />
+				<ComboBox x:Name="basedOn" ToolTip.Tip="{DynamicResource TipBasedOn}" SelectionChanged="OnBasedOnChanged"
+				          AutomationProperties.AutomationId="SchemeBasedOn">
+					<ComboBox.ItemTemplate>
+						<DataTemplate>
+							<DockPanel Margin="0,0,18,0">
+								<Rectangle DockPanel.Dock="Left" Width="56" Height="12" Margin="0,0,6,0" VerticalAlignment="Center" StrokeThickness="0.5"
+								           Stroke="{DynamicResource TextBoxBorder}" Fill="{Binding Stops, Converter={StaticResource ColorSchemeBrush}}" />
+								<TextBlock VerticalAlignment="Center" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+							</DockPanel>
+						</DataTemplate>
+					</ComboBox.ItemTemplate>
+				</ComboBox>
+			</controls:FormPanel>
+			<!-- the whole gradient; the binding to Stops re-evaluates on every edit -->
+			<Rectangle Height="18" Margin="0,0,0,6" Stroke="{DynamicResource TextBoxBorder}" StrokeThickness="1"
+			           Fill="{Binding Stops, Converter={StaticResource ColorSchemeBrush}}" AutomationProperties.AutomationId="SchemeGradient" />
+
+			<!-- one row per stop: position (0..1), swatch (the picker), colour as #RRGGBB, remove -->
+			<ItemsControl ItemsSource="{Binding Stops}" Focusable="False">
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<DockPanel Margin="0,0,0,4">
+							<Button DockPanel.Dock="Right" Content="×" Padding="5,0" ToolTip.Tip="{DynamicResource TipRemoveStop}"
+							        Click="OnRemoveStop" />
+							<NumericUpDown DockPanel.Dock="Left" Width="80" Minimum="0" Maximum="1" Increment="0.01" Value="{Binding Position, Mode=TwoWay}"
+							                    ToolTip.Tip="{DynamicResource TipStopPosition}" />
+							<!-- the swatch opens the colour picker (Space, Enter, Down); ids carry the stop's position -->
+							<controls:ColorPickerButton DockPanel.Dock="Left" Margin="4,0" Color="{Binding Color, Mode=TwoWay}" ToolTip.Tip="{DynamicResource TipStopSwatch}"
+							                            AutomationProperties.AutomationId="{Binding Position, StringFormat='StopSwatch:{0}'}" />
+							<TextBox Text="{Binding ColorText, Mode=TwoWay}" ToolTip.Tip="{DynamicResource TipStopColor}"
+							         AutomationProperties.AutomationId="{Binding Position, StringFormat='StopColor:{0}'}" />
+						</DockPanel>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+
+			<StackPanel Orientation="Horizontal">
+				<Button Padding="8,2" Margin="0,2,6,0" Content="{DynamicResource ButtonAddStop}" ToolTip.Tip="{DynamicResource TipAddStop}"
+				        Click="OnAddStop" AutomationProperties.AutomationId="SchemeAddStop" />
+			</StackPanel>
+		</StackPanel>
+
+</UserControl>

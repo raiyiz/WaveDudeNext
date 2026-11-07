@@ -20,4 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\WaveDudeNext\WaveDudeNext.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="../Examples/**/*" Link="Examples/%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest"/>
+  </ItemGroup>
 </Project>

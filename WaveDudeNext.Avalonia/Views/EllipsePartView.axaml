@@ -1,0 +1,60 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.EllipsePartView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:views="using:WaveDudeNext.Avalonia.Views"
+             xmlns:model="using:WaveDudeNext.Model"
+             Classes="wpfEditor" x:CompileBindings="False">
+    <UserControl.Resources><converters:ConditionConverter x:Key="Condition"/></UserControl.Resources>
+		<StackPanel Margin="8">
+			<views:PartCommonView />
+			<views:ShapeMaterialView />
+
+			<Label Classes="formSection" Content="{DynamicResource SectionShape}" />
+			<controls:FormPanel>
+				<!-- the two sizes with the chain beside them spanning both rows, as the image editors draw it; one row of the
+				     form, laid out to the form's label column -->
+				<Grid controls:FormPanel.FullWidth="True">
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="110" />
+						<ColumnDefinition Width="8" />
+						<ColumnDefinition Width="*" />
+						<ColumnDefinition Width="Auto" />
+					</Grid.ColumnDefinitions>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="4" />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+					<TextBlock Classes="formLabel" Text="{DynamicResource Label.EllipsePart.Length}" />
+					<NumericUpDown Grid.Column="2" Value="{Binding Length, Mode=TwoWay}" Minimum="1" Increment="10" ToolTip.Tip="{DynamicResource Hint.EllipsePart.Length}" AutomationProperties.AutomationId="PartLength"  Maximum="2147483647"/>
+					<TextBlock Grid.Row="2" Classes="formLabel" Text="{DynamicResource Label.EllipsePart.Width}" />
+					<NumericUpDown Grid.Row="2" Grid.Column="2" Value="{Binding Width, Mode=TwoWay}" Minimum="1" Increment="10" ToolTip.Tip="{DynamicResource Hint.EllipsePart.Width}" AutomationProperties.AutomationId="PartWidth"  Maximum="2147483647"/>
+					<ToggleButton Grid.Column="3" Grid.RowSpan="3" Content="↔" Margin="4,0,0,0" VerticalAlignment="Center"
+					              IsChecked="{Binding Linked, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.EllipsePart.Linked}" AutomationProperties.Name="{DynamicResource Label.EllipsePart.Linked}" AutomationProperties.AutomationId="PartLinked" />
+				</Grid>
+			</controls:FormPanel>
+		</StackPanel>
+
+</UserControl>

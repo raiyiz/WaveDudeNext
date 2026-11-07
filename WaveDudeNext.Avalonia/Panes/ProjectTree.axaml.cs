@@ -1,6 +1,7 @@
 
 using System;
 using System.Collections;
+using System.Linq;
 using Avalonia.Controls;
 using WaveDudeNext.Model;
 
@@ -23,8 +24,26 @@ public partial class ProjectTree : UserControl
         };
     }
 
+    public object? SelectedModel => (ProjectTreeView.SelectedItem as TreeViewItem)?.Tag;
+
+    public void SelectModel(object? model)
+    {
+        TreeViewItem? Find(System.Collections.IEnumerable rows)
+        {
+            foreach (var item in rows)
+            {
+                if (item is not TreeViewItem row) continue;
+                if (ReferenceEquals(row.Tag, model)) return row;
+                if (Find(row.Items) is { } child) return child;
+            }
+            return null;
+        }
+        ProjectTreeView.SelectedItem = model is null ? null : Find(ProjectTreeView.Items);
+    }
+
     public void LoadProject(Project? project)
     {
+        var selected = SelectedModel;
         ProjectTreeView.ItemsSource = null;
 
         if (project is null)
@@ -45,6 +64,7 @@ public partial class ProjectTree : UserControl
 
         ProjectTreeView.ItemsSource =
             new[] { root };
+        SelectModel(selected);
     }
 
     private static void AddCollection(
@@ -52,7 +72,7 @@ public partial class ProjectTree : UserControl
         string title,
         IEnumerable collection)
     {
-        var folder = Node(title, collection);
+        var folder = Node(title, new CollectionSelection(title, collection));
 
         foreach (var item in collection)
         {
@@ -105,11 +125,18 @@ public partial class ProjectTree : UserControl
 		            Mode = global::Avalonia.Data.BindingMode.TwoWay
 		        });
 
+            checkbox.Bind(ContentControl.ContentProperty, new global::Avalonia.Data.Binding("Name") { Source = model });
 		    row.Header = checkbox;
 		}
 		else
 		{
-		    row.Header = title;
+            if (model is Probe or WaveDudeNext.Rendering.ColorScheme)
+            {
+                var name = new TextBlock();
+                name.Bind(TextBlock.TextProperty, new global::Avalonia.Data.Binding("Name") { Source = model });
+                row.Header = name;
+            }
+            else row.Header = title;
 		}
 
 		return row;
@@ -117,3 +144,8 @@ public partial class ProjectTree : UserControl
 
 }
 
+
+public sealed record CollectionSelection(string Title, System.Collections.IEnumerable Items)
+{
+    public int Count => Items.Cast<object>().Count();
+}

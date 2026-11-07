@@ -1,0 +1,134 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.ProbeView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:model="using:WaveDudeNext.Model"
+             Classes="wpfEditor" x:CompileBindings="False">
+
+	<UserControl.Resources>
+        <converters:ConditionConverter x:Key="Condition"/>
+		<converters:MeasurementsForLayerConverter x:Key="MeasurementsForLayer" />
+		<!-- point B and the step axis only apply to line and point probes respectively -->
+
+
+
+		<!-- a logarithmic value axis only on the intensity layer (the field's amplitude changes sign), the decades only with it -->
+
+
+		<!-- the box width and height only apply to a custom box size (set by dragging the box's corner, too) -->
+
+	</UserControl.Resources>
+		<StackPanel Margin="8">
+			<Label Classes="formSection" Content="{DynamicResource SectionGeneral}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.Name}" />
+				<TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip.Tip="{DynamicResource Hint.Probe.Name}" />
+
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.Probe.Active}"
+				          IsChecked="{Binding Active, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Probe.Active}" AutomationProperties.AutomationId="ProbeActive" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.StartAfter}" />
+				<NumericUpDown Value="{Binding StartAfter, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.Probe.StartAfter}"  Maximum="2147483647"/>
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionMeasurement}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.Layer}" />
+				<ComboBox Classes="enumComboBox" ItemsSource="{x:Static controls:EnumItems.ProbeLayer}"
+				          SelectedItem="{Binding Layer, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Probe.Layer}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.Measurement}" />
+				<!-- only the measurements the layer offers: amplitude for the field, value / integrated value for the intensity -->
+				<ComboBox Classes="enumComboBox" ItemsSource="{Binding Layer, Converter={StaticResource MeasurementsForLayer}}"
+				          SelectedItem="{Binding Measurement, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Probe.Measurement}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.Kind}" />
+				<ComboBox Classes="enumComboBox" ItemsSource="{x:Static controls:EnumItems.ProbeKind}"
+				          SelectedItem="{Binding Kind, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Probe.Kind}" />
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionPosition}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.AX}" />
+				<NumericUpDown Value="{Binding AX, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.Probe.AX}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.AY}" />
+				<NumericUpDown Value="{Binding AY, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.Probe.AY}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.BX}" />
+				<NumericUpDown IsEnabled="{Binding Kind, Converter={StaticResource Condition}, ConverterParameter='True;Point=False'}" Value="{Binding BX, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.Probe.BX}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.BY}" />
+				<NumericUpDown IsEnabled="{Binding Kind, Converter={StaticResource Condition}, ConverterParameter='True;Point=False'}" Value="{Binding BY, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.Probe.BY}"  Maximum="2147483647"/>
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionGraph}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.BoxSize}" />
+				<ComboBox Classes="enumComboBox" ItemsSource="{x:Static controls:EnumItems.ProbeBoxSize}"
+				          SelectedItem="{Binding BoxSize, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Probe.BoxSize}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.BoxX}" />
+				<NumericUpDown Value="{Binding BoxX, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.Probe.BoxX}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.BoxY}" />
+				<NumericUpDown Value="{Binding BoxY, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.Probe.BoxY}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.BoxWidth}" />
+				<NumericUpDown IsEnabled="{Binding BoxSize, Converter={StaticResource Condition}, ConverterParameter='False;Custom=True'}" Value="{Binding BoxWidth, Mode=TwoWay}" Minimum="60" Maximum="4096" Increment="10" ToolTip.Tip="{DynamicResource Hint.Probe.BoxWidth}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.BoxHeight}" />
+				<NumericUpDown IsEnabled="{Binding BoxSize, Converter={StaticResource Condition}, ConverterParameter='False;Custom=True'}" Value="{Binding BoxHeight, Mode=TwoWay}" Minimum="30" Maximum="4096" Increment="10" ToolTip.Tip="{DynamicResource Hint.Probe.BoxHeight}" />
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionAxes}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.ScaleMode}" />
+				<ComboBox IsEnabled="{Binding Kind, Converter={StaticResource Condition}, ConverterParameter='True;Line=False'}" ItemsSource="{x:Static controls:EnumItems.ProbeScaleMode}"
+				          SelectedItem="{Binding ScaleMode, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Probe.ScaleMode}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.Window}" />
+				<NumericUpDown Value="{Binding Window, Mode=TwoWay}" Minimum="10" Maximum="1000000" Increment="10" ToolTip.Tip="{DynamicResource Hint.Probe.Window}" />
+
+				<CheckBox controls:FormPanel.FullWidth="True" IsEnabled="{Binding Kind, Converter={StaticResource Condition}, ConverterParameter='True;Line=False'}" Content="{DynamicResource Label.Probe.AutoScaleX}"
+				          IsChecked="{Binding AutoScaleX, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Probe.AutoScaleX}" />
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.Probe.AutoScaleY}"
+				          IsChecked="{Binding AutoScaleY, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Probe.AutoScaleY}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.YScale}" />
+				<ComboBox IsEnabled="{Binding Layer, Converter={StaticResource Condition}, ConverterParameter='True;Field=False'}" ItemsSource="{x:Static controls:EnumItems.ProbeValueScale}"
+				          SelectedItem="{Binding YScale, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Probe.YScale}" AutomationProperties.AutomationId="ProbeYScale" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.Decades}" />
+				<NumericUpDown IsEnabled="{Binding IsLogarithmic, Converter={StaticResource Condition}, ConverterParameter='False;True=True'}" Value="{Binding Decades, Mode=TwoWay}" Minimum="1" Maximum="12" ToolTip.Tip="{DynamicResource Hint.Probe.Decades}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.YMin}" />
+				<NumericUpDown Value="{Binding YMin, Mode=TwoWay}" Increment="0.1" ToolTip.Tip="{DynamicResource Hint.Probe.YMin}"  Minimum="-2147483648" Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Probe.YMax}" />
+				<NumericUpDown Value="{Binding YMax, Mode=TwoWay}" Increment="0.1" ToolTip.Tip="{DynamicResource Hint.Probe.YMax}"  Minimum="-2147483648" Maximum="2147483647"/>
+			</controls:FormPanel>
+		</StackPanel>
+
+</UserControl>

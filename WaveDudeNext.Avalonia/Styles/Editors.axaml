@@ -1,0 +1,181 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+        xmlns:controls="using:WaveDudeNext.Avalonia.Controls">
+    <Styles.Resources>
+        <converters:EnumNameConverter x:Key="EnumName"/>
+        <x:String x:Key="ButtonNewSeed">_New seed</x:String>
+        <x:String x:Key="Hint.Project.Description">Free-text notes about the project.</x:String>
+        <x:String x:Key="Hint.Project.Seed">Seed of all random decisions (emitter jitter, random gaps). The same seed reproduces the same frames.</x:String>
+        <x:String x:Key="Hint.Project.Version">Version of the project file format.</x:String>
+        <x:String x:Key="Hint.Scene.DampingEdge">Thickness in pixels of the absorbing frame: positive inside the canvas, where it shows as a dark margin; negative outside it, simulated but never shown. 0 turns it off.</x:String>
+        <x:String x:Key="Hint.Scene.Edges">Open lets a wave leave the grid, as if the canvas sat in open space; Reflective is a hard wall, as in Wave Dude 2D.</x:String>
+        <x:String x:Key="Hint.Scene.Height">Height of a blank canvas in pixels.</x:String>
+        <x:String x:Key="Hint.Scene.Image">Image the canvas is built from: red = refractive index (red 0 = a mirror), green = sources, blue = damping. The name of the embedded image, or a path relative to the project folder.</x:String>
+        <x:String x:Key="Hint.Scene.ImagePath">Where the embedded image came from; the embedded image is what is simulated, a missing file changes nothing. The file is watched while the project is open and re-embedded when it changes; on opening the project a changed file replaces the embedded image too.</x:String>
+        <x:String x:Key="Hint.Scene.ImageSourceScale">Peak amplitude of the image sources.</x:String>
+        <x:String x:Key="Hint.Scene.ImageSources">Let the green channel of the scene image emit waves; the pixel value is the frequency level.</x:String>
+        <x:String x:Key="Hint.Scene.Mode">Blank canvas of the given size, or a canvas built from the scene image.</x:String>
+        <x:String x:Key="Hint.Scene.ObjectSources">Use the sources defined in the project.</x:String>
+        <x:String x:Key="Hint.Scene.RefractiveIndex">Refractive index of a blank canvas, 1.0 to 2.55. The wave speed is 1/n cells per step.</x:String>
+        <x:String x:Key="Hint.Scene.Width">Width of a blank canvas in pixels.</x:String>
+        <x:String x:Key="Hint.Simulation.FourthOrderLaplacian">Use the 4th-order stencil with sub-stepping instead of the 9-point stencil. More accurate, slower.</x:String>
+        <x:String x:Key="Hint.Simulation.IntensityScale">Multiplier applied to the intensity values the engine produces.</x:String>
+        <x:String x:Key="Hint.Simulation.SourceFrequencyScale">Multiplier of the level-to-frequency mapping: ω = level / 255 × 0.5 × scale, in radians per step.</x:String>
+        <x:String x:Key="Hint.Simulation.Steps">Total number of simulation steps.</x:String>
+        <x:String x:Key="Hint.Simulation.TimeDecay">Averaging window factor of the intensity: the engine averages over this × 100 / lowest source level steps.</x:String>
+        <x:String x:Key="Hint.Simulation.VisualizeEvery">Render a frame, export it and sample the probes every this many steps.</x:String>
+        <x:String x:Key="Hint.Simulation.WaveSpeed">Nominal wave speed in pixels per step; only used to estimate wavelengths in the editor.</x:String>
+        <x:String x:Key="Label.Project.Description">Description</x:String>
+        <x:String x:Key="Label.Project.Seed">Random seed</x:String>
+        <x:String x:Key="Label.Project.Version">Format version</x:String>
+        <x:String x:Key="Label.Scene.DampingEdge">Damping edge</x:String>
+        <x:String x:Key="Label.Scene.Edges">Edges</x:String>
+        <x:String x:Key="Label.Scene.Height">Height</x:String>
+        <x:String x:Key="Label.Scene.Image">Scene image</x:String>
+        <x:String x:Key="Label.Scene.ImagePath">Image file</x:String>
+        <x:String x:Key="Label.Scene.ImageSourceScale">Image source amplitude</x:String>
+        <x:String x:Key="Label.Scene.ImageSources">Image sources</x:String>
+        <x:String x:Key="Label.Scene.Mode">Mode</x:String>
+        <x:String x:Key="Label.Scene.ObjectSources">Object sources</x:String>
+        <x:String x:Key="Label.Scene.RefractiveIndex">Refractive index</x:String>
+        <x:String x:Key="Label.Scene.Width">Width</x:String>
+        <x:String x:Key="Label.Simulation.FourthOrderLaplacian">4th-order Laplacian</x:String>
+        <x:String x:Key="Label.Simulation.IntensityScale">Intensity scale</x:String>
+        <x:String x:Key="Label.Simulation.SourceFrequencyScale">Source frequency scale</x:String>
+        <x:String x:Key="Label.Simulation.Steps">Steps</x:String>
+        <x:String x:Key="Label.Simulation.TimeDecay">Intensity time decay</x:String>
+        <x:String x:Key="Label.Simulation.VisualizeEvery">Visualize every</x:String>
+        <x:String x:Key="Label.Simulation.WaveSpeed">Wave speed</x:String>
+        <x:String x:Key="LabelEmbeddedImage">Embedded image</x:String>
+        <x:String x:Key="SceneImageNotFound">(not found)</x:String>
+        <x:String x:Key="SectionCanvas">Canvas</x:String>
+        <x:String x:Key="SectionGeneral">General</x:String>
+        <x:String x:Key="SectionImageSources">Sources from the image</x:String>
+        <x:String x:Key="SectionRun">Run</x:String>
+        <x:String x:Key="SectionSolver">Solver</x:String>
+        <x:String x:Key="TipBrowseSceneImage">Pick an image file; it is embedded in the project</x:String>
+        <x:String x:Key="TipEmbeddedImage">Size of the embedded scene image; the canvas takes this size</x:String>
+        <x:String x:Key="TipRemoveSceneImage">Drop the embedded image and its file path; the canvas keeps the image's size</x:String>
+        <x:String x:Key="TipSaveSceneImage">Save the embedded image to a file</x:String>
+        <SolidColorBrush x:Key="WindowForeground" Color="#FFF1F1F1"/>
+        <SolidColorBrush x:Key="GrayText" Color="#FF999999"/>
+        <SolidColorBrush x:Key="ControlBorder" Color="#FF3F3F46"/>
+        <SolidColorBrush x:Key="ToolWindowBackground" Color="#FF252526"/>
+        <SolidColorBrush x:Key="TextBoxBackground" Color="#FF333337"/>
+        <SolidColorBrush x:Key="TextBoxBorder" Color="#FF3F3F46"/>
+        <ControlTheme x:Key="CompactSpinner" TargetType="ButtonSpinner">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Grid ColumnDefinitions="*,14">
+                        <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                        <Grid Grid.Column="1" RowDefinitions="*,*">
+                            <RepeatButton x:Name="PART_IncreaseButton" Grid.Row="0" Padding="0" MinWidth="0" MinHeight="0" Focusable="False" Background="Transparent" BorderThickness="0">
+                                <Path Data="M0,3 L3,0 6,3" Stroke="#B0B0B0" StrokeThickness="1" Width="6" Height="3"/>
+                            </RepeatButton>
+                            <RepeatButton x:Name="PART_DecreaseButton" Grid.Row="1" Padding="0" MinWidth="0" MinHeight="0" Focusable="False" Background="Transparent" BorderThickness="0">
+                                <Path Data="M0,0 L3,3 6,0" Stroke="#B0B0B0" StrokeThickness="1" Width="6" Height="3"/>
+                            </RepeatButton>
+                        </Grid>
+                    </Grid>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+        <ControlTheme x:Key="CompactNumber" TargetType="NumericUpDown">
+            <Setter Property="MinHeight" Value="22"/>
+            <Setter Property="Background" Value="#333337"/>
+            <Setter Property="Foreground" Value="#F1F1F1"/>
+            <Setter Property="BorderBrush" Value="#3F3F46"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                        <ButtonSpinner x:Name="PART_Spinner" Theme="{StaticResource CompactSpinner}" AllowSpin="{TemplateBinding AllowSpin}">
+                            <TextBox x:Name="PART_TextBox" Text="{TemplateBinding Text, Mode=TwoWay}" Background="Transparent" BorderThickness="0" Padding="3,2" MinHeight="20" Foreground="{TemplateBinding Foreground}" IsReadOnly="{TemplateBinding IsReadOnly}"/>
+                        </ButtonSpinner>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </ControlTheme>
+    </Styles.Resources>
+    <Style Selector="UserControl.wpfEditor">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{DynamicResource WindowForeground}"/>
+        <Setter Property="Background" Value="{DynamicResource ToolWindowBackground}"/>
+    </Style>
+    <Style Selector="UserControl.wpfEditor Label.formSection">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlBorder}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="0,0,0,2"/>
+        <Setter Property="Margin" Value="0,2,0,6"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    </Style>
+    <Style Selector="UserControl.wpfEditor controls|FormPanel">
+        <Setter Property="Margin" Value="0,0,0,10"/>
+    </Style>
+    <Style Selector="UserControl.wpfEditor TextBlock.formLabel">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+    <Style Selector="UserControl.wpfEditor TextBlock.formValue">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Foreground" Value="{DynamicResource GrayText}"/>
+        <Setter Property="Margin" Value="4,0"/>
+    </Style>
+    <Style Selector="UserControl.wpfEditor TextBox, UserControl.wpfEditor NumericUpDown">
+        <Setter Property="MinHeight" Value="22"/>
+        <Setter Property="Padding" Value="3,2"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="Background" Value="{DynamicResource TextBoxBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource WindowForeground}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TextBoxBorder}"/>
+    </Style>
+    <Style Selector="UserControl.wpfEditor ComboBox">
+        <Setter Property="MinHeight" Value="22"/>
+        <Setter Property="Padding" Value="3,2"/>
+        <Setter Property="CornerRadius" Value="0"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="Background" Value="{DynamicResource TextBoxBackground}"/>
+        <Setter Property="Foreground" Value="{DynamicResource WindowForeground}"/>
+    </Style>
+    <Style Selector="UserControl.wpfEditor CheckBox">
+        <Setter Property="MinHeight" Value="22"/>
+        <Setter Property="Padding" Value="0"/>
+    </Style>
+    <Style Selector="UserControl.wpfEditor Button">
+        <Setter Property="MinHeight" Value="22"/>
+        <Setter Property="Padding" Value="6,2"/>
+        <Setter Property="CornerRadius" Value="0"/>
+    </Style>
+    <Style Selector="UserControl.wpfEditor ComboBox.enumComboBox">
+        <Setter Property="ItemTemplate">
+            <DataTemplate><TextBlock Text="{Binding Converter={StaticResource EnumName}}"/></DataTemplate>
+        </Setter>
+    </Style>
+    <Style Selector="UserControl.wpfEditor TextBlock.formReadout">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="NumericUpDown">
+        <Setter Property="Theme" Value="{StaticResource CompactNumber}"/>
+    </Style>
+</Styles>

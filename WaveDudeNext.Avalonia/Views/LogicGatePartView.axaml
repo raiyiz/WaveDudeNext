@@ -1,0 +1,192 @@
+﻿<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.LogicGatePartView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:localization="using:WaveDudeNext.Avalonia.Localization"
+             xmlns:views="using:WaveDudeNext.Avalonia.Views"
+             xmlns:model="using:WaveDudeNext.Model"
+             Classes="wpfEditor" x:CompileBindings="False">
+
+	<UserControl.Resources>
+        <converters:ConditionConverter x:Key="Condition"/>
+		<converters:LogicGateLayoutConverter x:Key="Layout" />
+		<converters:EnumNameConverter x:Key="EnumName" />
+	</UserControl.Resources>
+		<StackPanel Margin="8">
+			<views:PartCommonView />
+
+			<Label Classes="formSection" Content="{DynamicResource SectionDesign}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LogicGatePart.DesignFrequency}" />
+				<NumericUpDown Value="{Binding DesignFrequency, Mode=TwoWay}" Minimum="1" Maximum="255" ToolTip.Tip="{DynamicResource Hint.LogicGatePart.DesignFrequency}" AutomationProperties.AutomationId="PartDesignFrequency" />
+
+				<!-- read-only: the wavelength the frequency gives with the project's frequency scale -->
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelWavelength}" />
+				<TextBlock Classes="formReadout" ToolTip.Tip="{DynamicResource TipGateWavelength}" AutomationProperties.AutomationId="PartWavelength">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="Wavelength">
+							<Binding /><Binding Path="Wavelength" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionMaterial}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LogicGatePart.CoreIndex}" />
+				<NumericUpDown Value="{Binding CoreIndex, Mode=TwoWay}" Minimum="1" Maximum="2.55" Increment="0.01" ToolTip.Tip="{DynamicResource Hint.LogicGatePart.CoreIndex}" AutomationProperties.AutomationId="PartCoreIndex" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LogicGatePart.CladdingIndex}" />
+				<NumericUpDown Value="{Binding CladdingIndex, Mode=TwoWay}" Minimum="1" Maximum="2.55" Increment="0.01" ToolTip.Tip="{DynamicResource Hint.LogicGatePart.CladdingIndex}" AutomationProperties.AutomationId="PartCladdingIndex" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LogicGatePart.Coating}" />
+				<NumericUpDown Value="{Binding Coating, Mode=TwoWay}" Minimum="0" Maximum="50" ToolTip.Tip="{DynamicResource Hint.LogicGatePart.Coating}" AutomationProperties.AutomationId="PartCoating" />
+
+				<!-- per end, so a junction between staggered gates can go without a band -->
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.LogicGatePart.InputCoated}"
+				          IsChecked="{Binding InputCoated, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.LogicGatePart.InputCoated}" AutomationProperties.AutomationId="PartInputCoated" />
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.LogicGatePart.OutputCoated}"
+				          IsChecked="{Binding OutputCoated, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.LogicGatePart.OutputCoated}" AutomationProperties.AutomationId="PartOutputCoated" />
+
+				<!-- read-only: the quarter-wave thickness for the core, the least reflecting band -->
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelQuarterWave}" />
+				<TextBlock Classes="formReadout" ToolTip.Tip="{DynamicResource TipQuarterWave}" AutomationProperties.AutomationId="PartQuarterWave">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="QuarterWave">
+							<Binding /><Binding Path="Wavelength" /><Binding Path="CoreIndex" /><Binding Path="CladdingIndex" /><Binding Path="PortSpacing" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionShape}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LogicGatePart.PortSpacing}" />
+				<!-- the spacing the design uses, so each step moves the ports; a value below the minimum springs back to it -->
+				<NumericUpDown Value="{Binding PortSpacingUsed, Mode=TwoWay}" Minimum="2" Maximum="2000" Increment="2" ToolTip.Tip="{DynamicResource Hint.LogicGatePart.PortSpacing}" AutomationProperties.AutomationId="PartPortSpacing" />
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionOutputs}" />
+			<controls:FormPanel>
+				<!-- each output by its place, ticked to let its light out; the box names what the output gives for this kind of gate -->
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LogicGatePart.UpperOutputActive}" />
+				<CheckBox IsChecked="{Binding UpperOutputActive, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.LogicGatePart.UpperOutputActive}" AutomationProperties.AutomationId="PartUpperOutputActive">
+					<CheckBox.Content>
+						<MultiBinding Converter="{StaticResource EnumName}">
+							<Binding Path="UpperOutput" />
+
+						</MultiBinding>
+					</CheckBox.Content>
+				</CheckBox>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LogicGatePart.LowerOutputActive}" />
+				<CheckBox IsChecked="{Binding LowerOutputActive, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.LogicGatePart.LowerOutputActive}" AutomationProperties.AutomationId="PartLowerOutputActive">
+					<CheckBox.Content>
+						<MultiBinding Converter="{StaticResource EnumName}">
+							<Binding Path="LowerOutput" />
+
+						</MultiBinding>
+					</CheckBox.Content>
+				</CheckBox>
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionLayout}" />
+			<controls:FormPanel ToolTip.Tip="{DynamicResource TipGateLayout}">
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelCoreWidth}" />
+				<TextBlock Classes="formReadout" AutomationProperties.AutomationId="PartCoreWidth">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="CoreWidth">
+							<Binding /><Binding Path="Wavelength" /><Binding Path="CoreIndex" /><Binding Path="CladdingIndex" /><Binding Path="PortSpacing" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelCouplerGap}" />
+				<TextBlock Classes="formReadout" AutomationProperties.AutomationId="PartCouplerGap">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="Gap">
+							<Binding /><Binding Path="Wavelength" /><Binding Path="CoreIndex" /><Binding Path="CladdingIndex" /><Binding Path="PortSpacing" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelCouplerLength}" />
+				<TextBlock Classes="formReadout" AutomationProperties.AutomationId="PartCouplerLength">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="CouplerLength">
+							<Binding /><Binding Path="Wavelength" /><Binding Path="CoreIndex" /><Binding Path="CladdingIndex" /><Binding Path="PortSpacing" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelGateLength}" />
+				<TextBlock Classes="formReadout" AutomationProperties.AutomationId="PartGateLength">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="Length">
+							<Binding /><Binding Path="Wavelength" /><Binding Path="CoreIndex" /><Binding Path="CladdingIndex" /><Binding Path="PortSpacing" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionPorts}" />
+			<controls:FormPanel ToolTip.Tip="{DynamicResource TipGatePorts}">
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelInputA}" />
+				<TextBlock Classes="formReadout" AutomationProperties.AutomationId="PartInputA">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="InputA">
+							<Binding /><Binding Path="X" /><Binding Path="Y" /><Binding Path="Angle" /><Binding Path="Wavelength" /><Binding Path="CoreIndex" /><Binding Path="CladdingIndex" /><Binding Path="PortSpacing" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelInputB}" />
+				<TextBlock Classes="formReadout" AutomationProperties.AutomationId="PartInputB">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="InputB">
+							<Binding /><Binding Path="X" /><Binding Path="Y" /><Binding Path="Angle" /><Binding Path="Wavelength" /><Binding Path="CoreIndex" /><Binding Path="CladdingIndex" /><Binding Path="PortSpacing" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LogicGatePart.UpperOutputActive}" />
+				<TextBlock Classes="formReadout" AutomationProperties.AutomationId="PartOutputUpper">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="OutputUpper">
+							<Binding /><Binding Path="X" /><Binding Path="Y" /><Binding Path="Angle" /><Binding Path="Wavelength" /><Binding Path="CoreIndex" /><Binding Path="CladdingIndex" /><Binding Path="PortSpacing" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LogicGatePart.LowerOutputActive}" />
+				<TextBlock Classes="formReadout" AutomationProperties.AutomationId="PartOutputLower">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Layout}" ConverterParameter="OutputLower">
+							<Binding /><Binding Path="X" /><Binding Path="Y" /><Binding Path="Angle" /><Binding Path="Wavelength" /><Binding Path="CoreIndex" /><Binding Path="CladdingIndex" /><Binding Path="PortSpacing" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+			</controls:FormPanel>
+		</StackPanel>
+
+</UserControl>

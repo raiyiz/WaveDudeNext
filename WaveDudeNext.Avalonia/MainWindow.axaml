@@ -1,172 +1,139 @@
-
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:panes="using:WaveDudeNext.Avalonia.Panes"
+        xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
         x:Class="WaveDudeNext.Avalonia.MainWindow"
-        Title="WaveDudeNext - Linux"
-        Width="1400"
-        Height="900"
-        MinWidth="850"
-        MinHeight="550"
-        Background="#202124">
-
-    <Grid RowDefinitions="Auto,Auto,*,Auto">
-
-        <!-- Application menu -->
+        Title="WaveDude Next" Width="1500" Height="900" MinWidth="1000" MinHeight="600"
+        Background="#2D2D30" Foreground="#F1F1F1">
+    <Grid RowDefinitions="Auto,Auto,*,Auto,Auto">
         <Menu Grid.Row="0">
             <MenuItem Header="_File">
-                <MenuItem Header="_Open Project..."
-                          Click="OpenProject_Click"/>
+                <MenuItem Header="_New Project" Click="NewProject_Click"/>
+                <MenuItem Header="_Open Project…" Click="OpenProject_Click"/>
+                <MenuItem x:Name="ExamplesMenu" Header="E_xamples"/>
+                <Separator/>
+                <MenuItem Header="_Save" Click="SaveProject_Click"/>
+                <MenuItem Header="Save _As…" Click="SaveProjectAs_Click"/>
+                <Separator/>
+                <MenuItem Header="Export field frame…" Tag="Field" Click="ExportFrame_Click"/>
+                <MenuItem Header="Export intensity frame…" Tag="Intensity" Click="ExportFrame_Click"/>
+                <MenuItem Header="Export selected probe CSV…" Click="ExportProbe_Click"/>
+                <Separator/>
+                <MenuItem Header="E_xit" Click="Exit_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Undo" Click="Undo_Click"/>
+                <MenuItem Header="_Redo" Click="Redo_Click"/>
+                <Separator/>
+                <MenuItem Header="_Duplicate" Click="Duplicate_Click"/>
+                <MenuItem Header="_Delete" Click="Delete_Click"/>
+                <MenuItem Header="Move _up" Tag="-1" Click="MoveObject_Click"/>
+                <MenuItem Header="Move _down" Tag="1" Click="MoveObject_Click"/>
+            </MenuItem>
+            <MenuItem Header="_Project">
+                <MenuItem Header="Add _source" Click="AddSource_Click"/>
+                <MenuItem Header="Add _part">
+                    <MenuItem Header="Lens / mirror" Tag="LensPart" Click="AddPart_Click"/>
+                    <MenuItem Header="Polygon" Tag="PolygonPart" Click="AddPart_Click"/>
+                    <MenuItem Header="Rectangle" Tag="RectanglePart" Click="AddPart_Click"/>
+                    <MenuItem Header="Ellipse" Tag="EllipsePart" Click="AddPart_Click"/>
+                    <MenuItem Header="Triangle" Tag="TrianglePart" Click="AddPart_Click"/>
+                    <MenuItem Header="Outline" Tag="OutlinePart" Click="AddPart_Click"/>
+                    <MenuItem Header="Fibre" Tag="FiberPart" Click="AddPart_Click"/>
+                    <MenuItem Header="Bragg reflector" Tag="BraggReflectorPart" Click="AddPart_Click"/>
+                    <MenuItem Header="GRIN lens" Tag="GrinLensPart" Click="AddPart_Click"/>
+                    <MenuItem Header="Zone plate" Tag="ZonePlatePart" Click="AddPart_Click"/>
+                    <MenuItem Header="XOR gate" Tag="XorGatePart" Click="AddPart_Click"/>
+                    <MenuItem Header="AND gate" Tag="AndGatePart" Click="AddPart_Click"/>
+                    <MenuItem Header="OR gate" Tag="OrGatePart" Click="AddPart_Click"/>
+                </MenuItem>
+                <MenuItem Header="Add _probe" Click="AddProbe_Click"/>
+                <MenuItem Header="Add colour scheme" Click="AddScheme_Click"/>
             </MenuItem>
             <MenuItem Header="_Simulation">
-                <MenuItem Header="_Start"
-                          Click="Start_Click"/>
-                <MenuItem Header="_Pause"
-                          Click="Pause_Click"/>
-                <MenuItem Header="_Reset"
-                          Click="Reset_Click"/>
+                <MenuItem Header="_Run" Click="Start_Click"/>
+                <MenuItem Header="_Pause" Click="Pause_Click"/>
+                <MenuItem Header="_Reset" Click="Reset_Click"/>
+                <MenuItem Header="Apply changes" Click="ApplyChanges_Click"/>
+                <Separator/>
+                <MenuItem Header="Play / pause playback" Click="PlayPause_Click"/>
             </MenuItem>
         </Menu>
-
-        <!-- Simulation toolbar -->
-        <Border Grid.Row="1"
-                Background="#292B30"
-                Padding="8,5">
-            <StackPanel Orientation="Horizontal"
-                        Spacing="8">
-                <Button Content="Open Project"
-                        Click="OpenProject_Click"/>
-                <Button Content="Start"
-                        Click="Start_Click"/>
-                <Button Content="Pause"
-                        Click="Pause_Click"/>
-                <Button Content="Reset"
-                        Click="Reset_Click"/>
-                <Button Content="Apply Changes"
-        				Click="ApplyChanges_Click"/>
-        		<Button Content="Undo"
-						Click="Undo_Click"/>
-				<Button Content="Redo"
-						Click="Redo_Click"/>
+        <Border Grid.Row="1" Background="#333337" BorderBrush="#3F3F46" BorderThickness="0,1,0,1" Padding="6,4">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+                <Button Content="New" Click="NewProject_Click"/>
+                <Button Content="Open" Click="OpenProject_Click"/>
+                <Button Content="Save" Click="SaveProject_Click"/>
+                <Separator Width="8"/>
+                <Button Content="▶ Run" Click="Start_Click"/>
+                <Button Content="Ⅱ Pause" Click="Pause_Click"/>
+                <Button Content="↺ Reset" Click="Reset_Click"/>
+                <Button Content="Apply" Click="ApplyChanges_Click"/>
+                <Button Content="Undo" Click="Undo_Click"/>
+                <Button Content="Redo" Click="Redo_Click"/>
+                <Separator Width="8"/>
+                <Button Content="+ Source" Click="AddSource_Click"/>
+                <Button Content="+ Lens" Tag="LensPart" Click="AddPart_Click"/>
+                <Button Content="+ Probe" Click="AddProbe_Click"/>
+                <CheckBox x:Name="AutoApply" Content="Auto rerun" IsChecked="True" Margin="8,0,0,0"/>
             </StackPanel>
         </Border>
-
-        <!-- Main workspace -->
-        <Grid Grid.Row="2"
-              ColumnDefinitions="300,5,*"
-              Margin="4">
-
-            <!-- Left sidebar -->
-            <Grid Grid.Column="0"
-                  RowDefinitions="2*,5,*">
-
-                <!-- Project panel -->
-                <Border Grid.Row="0"
-                        Background="#292B30"
-                        Padding="6">
+        <Grid Grid.Row="2" ColumnDefinitions="240,5,*,5,340" Margin="4">
+            <Border Grid.Column="0" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1">
+                <panes:ProjectTree x:Name="ProjectTreeControl"/>
+            </Border>
+            <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" Background="#3F3F46"/>
+            <Grid Grid.Column="2" ColumnDefinitions="*,5,*">
+                <Border Grid.Column="0" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1">
                     <Grid RowDefinitions="Auto,*">
-
-                        <TextBlock Text="Project"
-                                   FontWeight="Bold"
-                                   Margin="4,2,4,8"/>
-
-                        <!-- Real tree comes next -->
-                        <panes:ProjectTree
-    						x:Name="ProjectTreeControl"
-    						Grid.Row="1"/>
-                    </Grid>
-                </Border>
-
-                <GridSplitter Grid.Row="1"
-                              Height="5"
-                              ResizeDirection="Rows"
-                              Background="#454850"/>
-
-                <!-- Properties panel -->
-                <Border Grid.Row="2"
-                        Background="#292B30"
-                        Padding="8">
-                    <Grid RowDefinitions="Auto,*">
-
-                        <TextBlock Text="Properties"
-                                   FontWeight="Bold"
-                                   Margin="4,2,4,8"/>
-
-                        <ScrollViewer Grid.Row="1"
-              				VerticalScrollBarVisibility="Auto">
-							<panes:PropertiesPane
-    							x:Name="PropertiesEditor"
-    						Grid.Row="1"/>
-					</ScrollViewer>
-                    </Grid>
-                </Border>
-            </Grid>
-
-            <!-- Resizable sidebar -->
-            <GridSplitter Grid.Column="1"
-                          Width="5"
-                          ResizeDirection="Columns"
-                          Background="#454850"/>
-
-            <!-- Simulation preview -->
-            <Grid Grid.Column="2"
-                  RowDefinitions="*,5,*">
-
-                <!-- Field -->
-                <Border Grid.Row="0"
-                        Background="Black"
-                        Padding="8">
-                    <Grid RowDefinitions="Auto,*">
-
-                        <TextBlock Text="Field"
-                                   Foreground="White"
-                                   Margin="4"/>
-
-                        <Grid Grid.Row="1">
-                            <Image x:Name="FieldImage"
-                                   Stretch="Uniform"
-                                   RenderOptions.BitmapInterpolationMode="None"/>
-
-                            <Image x:Name="GeometryOverlay"
-                                   Stretch="Uniform"
-                                   IsVisible="False"
-                                   IsHitTestVisible="False"/>
+                        <Border Background="#2D2D30" Padding="6,4"><TextBlock Text="Field" FontWeight="SemiBold"/></Border>
+                        <Grid Grid.Row="1" ClipToBounds="True">
+                            <Image x:Name="FieldImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+                            <controls:SceneCanvas x:Name="FieldCanvas"/>
                         </Grid>
                     </Grid>
                 </Border>
-
-                <GridSplitter Grid.Row="1"
-                              Height="5"
-                              ResizeDirection="Rows"
-                              Background="#454850"/>
-
-                <!-- Intensity -->
-                <Border Grid.Row="2"
-                        Background="Black"
-                        Padding="8">
+                <GridSplitter Grid.Column="1" Width="5" ResizeDirection="Columns" Background="#3F3F46"/>
+                <Border Grid.Column="2" Background="#1E1E1E" BorderBrush="#3F3F46" BorderThickness="1">
                     <Grid RowDefinitions="Auto,*">
-
-                        <TextBlock Text="Intensity"
-                                   Foreground="White"
-                                   Margin="4"/>
-
-                        <Image x:Name="IntensityImage"
-                               Grid.Row="1"
-                               Stretch="Uniform"
-                               RenderOptions.BitmapInterpolationMode="None"/>
+                        <Border Background="#2D2D30" Padding="6,4"><TextBlock Text="Intensity" FontWeight="SemiBold"/></Border>
+                        <Grid Grid.Row="1" ClipToBounds="True">
+                            <Image x:Name="IntensityImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None"/>
+                            <controls:SceneCanvas x:Name="IntensityCanvas"/>
+                        </Grid>
                     </Grid>
                 </Border>
             </Grid>
+            <GridSplitter Grid.Column="3" Width="5" ResizeDirection="Columns" Background="#3F3F46"/>
+            <Border Grid.Column="4" Background="#252526" BorderBrush="#3F3F46" BorderThickness="1">
+                <Grid RowDefinitions="Auto,*">
+                    <Border Background="#2D2D30" Padding="6,4"><TextBlock Text="Properties" FontWeight="SemiBold"/></Border>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <panes:PropertiesPane x:Name="PropertiesEditor"/>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
         </Grid>
-
-        <!-- Status bar -->
-        <Border Grid.Row="3"
-                Background="#252A34"
-                Padding="8,5">
-            <TextBlock x:Name="StatusText"
-                       Text="Ready"
-                       Foreground="#C9D5E8"/>
+        <Border Grid.Row="3" Background="#252526" Padding="8,5" BorderBrush="#3F3F46" BorderThickness="0,1,0,0">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <Button Content="|◀" Tag="First" Click="Seek_Click"/>
+                    <Button Content="◀" Tag="Previous" Click="Seek_Click"/>
+                    <Button x:Name="PlayButton" Content="▶ Play" Click="PlayPause_Click"/>
+                    <Button Content="▶" Tag="Next" Click="Seek_Click"/>
+                    <Button Content="▶|" Tag="Last" Click="Seek_Click"/>
+                </StackPanel>
+                <Slider x:Name="TimelineSlider" Grid.Column="1" Minimum="0" Maximum="0" Value="0" Margin="12,0" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Timeline_Changed"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                    <CheckBox x:Name="LoopPlayback" Content="Loop"/>
+                    <TextBlock Text="Speed" VerticalAlignment="Center"/>
+                    <NumericUpDown x:Name="PlaybackSpeed" Value="1" Minimum="0.1" Maximum="8" Increment="0.1" Width="85"/>
+                </StackPanel>
+                <TextBlock x:Name="FrameText" Grid.Row="1" Grid.ColumnSpan="3" Text="Frame 0" Foreground="#B0B0B0" Margin="0,3,0,0"/>
+            </Grid>
+        </Border>
+        <Border Grid.Row="4" Background="#007ACC" Padding="8,4">
+            <TextBlock x:Name="StatusText" Text="Ready" Foreground="White"/>
         </Border>
     </Grid>
 </Window>
-

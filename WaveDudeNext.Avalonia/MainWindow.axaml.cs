@@ -12,9 +12,10 @@ using Avalonia.Platform.Storage;
 using WaveDudeNext.Model;
 using WaveDudeNext.Runs;
 using WaveDudeNext.Parts;
+using WaveDudeNext.Avalonia.Rendering;
 
 using System.Reflection;
-using Avalonia.Controls;
+using System.IO;
 using System.Linq;
 
 
@@ -27,10 +28,11 @@ public partial class MainWindow : Window
     private const int WidthPixels = 256;
     private const int HeightPixels = 256;
 
-    private IWaveEngine _engine;
-	private WriteableBitmap _fieldBitmap;
-	private WriteableBitmap _intensityBitmap;
+    private IWaveEngine _engine = null!;
+	private WriteableBitmap _fieldBitmap = null!;
+	private WriteableBitmap _intensityBitmap = null!;
     private readonly DispatcherTimer _timer;
+    private readonly SceneImageWatch _sceneImageWatch;
     
     private ProjectWatcher? _projectWatcher;
 	private ProjectHistory? _projectHistory;
@@ -38,97 +40,33 @@ public partial class MainWindow : Window
 	private bool _needsSimulationRebuild;
 
     private int _step;
+    private int _runSteps = int.MaxValue;
+    private int _visualizeEvery = 4;
 
     public MainWindow()
     {
         InitializeComponent();
-        
-        
-        ProjectTreeControl.SelectedModelChanged += model =>
-			{
-				PropertiesEditor.SelectedObject = model;
-			};
-
-        // Create a simple white-background scene in BGRA format.
-        byte[] scenePixels = new byte[
-            WidthPixels * HeightPixels * 4
-        ];
-
-        for (int i = 0; i < WidthPixels * HeightPixels; i++)
-        {
-            scenePixels[i * 4 + 2] = 100; // Refractive index 1.0
-            scenePixels[i * 4 + 3] = 255; // Alpha
-        }
-
-        // Green-channel pixel = wave source.
-        int source = (
-            (HeightPixels / 2) * WidthPixels +
-            WidthPixels / 2
-        ) * 4;
-
-        scenePixels[source + 1] = 180;
-
-        var scene = SceneData.FromBgra(
-            scenePixels,
-            WidthPixels,
-            HeightPixels,
-            WidthPixels * 4,
-            useSources: true,
-            dampingEdge: 16
-        );
-
-        var options = new EngineOptions(
-            SourceFrequencyScale: 1.0,
-            SourceAmplitude: 1.0,
-            TrackIntensity: true,
-            FourthOrderLaplacian: false,
-            TimeDecay: 1.0,
-            IntensityScale: 1.0
-        );
-
-        _engine = WaveEngineFactory.Create(
-			scene,
-			options,
-			preferGpu: true,
-			emitters: null,
-			out string gpuNote
-		);
-
-		Console.WriteLine($"Engine: {_engine.Description}");
-
-		if (!string.IsNullOrEmpty(gpuNote))
-		{
-			Console.WriteLine(gpuNote);
-		}
-
-        var size = new PixelSize(WidthPixels, HeightPixels);
-        var dpi = new Vector(96, 96);
-
-        _fieldBitmap = new WriteableBitmap(
-            size, dpi, PixelFormats.Bgra8888, AlphaFormat.Opaque
-        );
-
-        _intensityBitmap = new WriteableBitmap(
-            size, dpi, PixelFormats.Bgra8888, AlphaFormat.Opaque
-        );
-
-        FieldImage.Source = _fieldBitmap;
-        IntensityImage.Source = _intensityBitmap;
-
-        _timer = new DispatcherTimer
-        {
-            Interval = TimeSpan.FromMilliseconds(50)
-        };
-
+        _sceneImageWatch = new SceneImageWatch(message => StatusText.Text = message);
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
         _timer.Tick += (_, _) => UpdateSimulation();
-
-        RenderFrame();
+        InitializeWorkspace();
+        Closed += (_, _) =>
+        {
+            _timer.Stop();
+            _editTimer.Stop();
+            StopPlayback();
+            _frames?.Dispose();
+            _sceneImageWatch.Dispose();
+            _projectWatcher?.Dispose();
+            (_engine as IDisposable)?.Dispose();
+            _fieldBitmap.Dispose();
+            _intensityBitmap.Dispose();
+        };
     }
-    
-    
-    
-    
+
+
 	private Project? _loadedProject;
+    private string? _projectPath;
 
 	private async void OpenProject_Click(
 		object? sender,
@@ -159,23 +97,9 @@ public partial class MainWindow : Window
 		        throw new NotSupportedException(
 		            "Only local project files are supported.");
 
-		    _loadedProject = Project.Load(path);
-		    LoadSimulation(_loadedProject);
-		    ProjectTreeControl.LoadProject(_loadedProject);
-		    
-		    PropertiesEditor.Project = _loadedProject;
-			PropertiesEditor.SelectedObject = null;
-			
-			AttachProjectTracking(_loadedProject);
-			
-			
-
-		    StatusText.Text =
-		        $"Loaded: {System.IO.Path.GetFileName(path)} | " +
-		        $"Scene: {_loadedProject.Scene.Width}x" +
-		        $"{_loadedProject.Scene.Height} | " +
-		        $"Sources: {_loadedProject.Sources.Count} | " +
-		        $"Parts: {_loadedProject.Parts.Count}";
+            if (!await ConfirmProjectReplacement()) return;
+            InstallProject(Project.Load(path), path);
+            StatusText.Text = $"Loaded: {Path.GetFileName(path)}";
 
 		    Console.WriteLine(
 		        $"Loaded project: {path}");
@@ -191,6 +115,88 @@ public partial class MainWindow : Window
 	
 	
 	
+    private async void SaveProject_Click(object? sender,
+        global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        await SaveProjectAsync(saveAs: false);
+    }
+
+    private async void SaveProjectAs_Click(object? sender,
+        global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        await SaveProjectAsync(saveAs: true);
+    }
+
+    private async System.Threading.Tasks.Task<bool> SaveProjectAsync(bool saveAs)
+    {
+        if (_loadedProject is null)
+        {
+            StatusText.Text = "Open a project before saving.";
+            return false;
+        }
+
+        string? temporaryPath = null;
+        string? previousImagePath = null;
+        try
+        {
+            var path = _projectPath;
+            if (saveAs || path is null)
+            {
+                var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+                {
+                    Title = "Save WaveDudeNext Project",
+                    SuggestedFileName = path is null ? "Project.wdproj" : Path.GetFileName(path),
+                    DefaultExtension = "wdproj",
+                    ShowOverwritePrompt = true,
+                    FileTypeChoices = [new FilePickerFileType("WaveDudeNext Project")
+                    {
+                        Patterns = ["*.wdproj"]
+                    }]
+                });
+                if (file is null)
+                    return false;
+                path = file.TryGetLocalPath()
+                    ?? throw new NotSupportedException("Only local project files are supported.");
+            }
+
+            // Serialize beside the destination before replacing it, so a failed save
+            // leaves the previous project intact. Pending editor changes are included.
+            temporaryPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!,
+                $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+            previousImagePath = _loadedProject.Scene.ImagePath;
+            string resolvedImagePath = _loadedProject.Scene.ResolveImagePath(PropertiesEditor.ProjectFolder);
+            if (resolvedImagePath.Length > 0)
+                _loadedProject.Scene.ImagePath = Scene.StoredImagePath(Path.GetDirectoryName(path), resolvedImagePath);
+            _loadedProject.Save(temporaryPath);
+            File.Move(temporaryPath, path, overwrite: true);
+            temporaryPath = null;
+            previousImagePath = null;
+            _projectHistory?.Record();
+            _projectHistory?.MarkSaved();
+            _projectPath = path;
+            PropertiesEditor.ProjectFolder = Path.GetDirectoryName(path);
+            _sceneImageWatch.Attach(_loadedProject.Scene, PropertiesEditor.ProjectFolder, refresh: false);
+            StatusText.Text = $"Saved: {Path.GetFileName(path)}";
+            Title = "WaveDude Next — " + Path.GetFileNameWithoutExtension(path);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            if (previousImagePath is not null) _loadedProject.Scene.ImagePath = previousImagePath;
+            StatusText.Text = $"Could not save project: {ex.Message}";
+            Console.WriteLine(ex);
+            return false;
+        }
+        finally
+        {
+            if (temporaryPath is not null)
+            {
+                try { File.Delete(temporaryPath); }
+                catch (Exception ex) { Console.WriteLine(ex); }
+            }
+        }
+    }
+
 	private void ApplyChanges_Click(
 		object? sender,
 		global::Avalonia.Interactivity.RoutedEventArgs e)
@@ -267,39 +273,36 @@ public partial class MainWindow : Window
 		_needsSimulationRebuild = false;
 
 		_projectWatcher.Changed += OnProjectChanged;
+        _sceneImageWatch.Attach(project.Scene, PropertiesEditor.ProjectFolder);
 	}
 
 	private void OnProjectChanged(
 		object? sender,
 		ProjectChange change)
 	{
+        _fieldLut = _intensityLut = null;
+        FieldCanvas.InvalidateVisual();
+        IntensityCanvas.InvalidateVisual();
+        if (AutoApply.IsChecked == true)
+        {
+            _editTimer.Stop();
+            _editTimer.Start();
+        }
 		_hasPendingChanges = true;
 
-		if (change.AffectsSimulation)
+		if (change.AffectsSimulation || change.AffectsProbes)
 		    _needsSimulationRebuild = true;
 
-		Console.WriteLine(
-		    $"Changed: {change.Item.GetType().Name}." +
-		    $"{change.Property} | " +
-		    $"{change.OldValueText} -> {change.NewValueText}");
 
-		Console.WriteLine(
-		    $"Simulation rebuild needed: {_needsSimulationRebuild}");
 	}
 
 	
 	
 	
-	private void LoadSimulation(Project project)
+	private void LoadSimulation(Project project, string? projectFolder = null)
 	{
 		
-		var paintedScene = PartPainter.Paint(
-			null,
-			project.Scene.Width,
-			project.Scene.Height,
-			project.Scene.RefractiveIndex,
-			project.Parts
-		);
+        var paintedScene = SceneImageLoader.Compose(project, projectFolder ?? PropertiesEditor.ProjectFolder);
 
 		var spec = RunSpec.Create(
 			project,
@@ -307,33 +310,6 @@ public partial class MainWindow : Window
 			preferGpu: true,
 			trackIntensity: true
 		);
-		
-		Console.WriteLine("=== Simulation diagnostics ===");
-
-		Console.WriteLine(
-			$"Sources in project: {project.Sources.Count}");
-
-		foreach (var source in project.Sources)
-		{
-			Console.WriteLine(
-				$"Source: {source.Name}, Enabled: {source.Enabled}");
-				
-			Console.WriteLine(
-				$"Source: {source.Name}, " +
-				$"Enabled: {source.Enabled}, " +
-				$"Position: ({source.X}, {source.Y})");
-
-		}
-
-		Console.WriteLine(
-			$"Object emitters: {spec.Emitters.Length}");
-
-		Console.WriteLine(
-			$"Image sources enabled: {spec.ImageSources}");
-
-		Console.WriteLine(
-			$"Scene image: {(spec.Image is null ? "null" : "present")}");
-			
 		
 		SceneData scene = spec.Image is { } image
 			? SceneData.FromBgra(
@@ -382,6 +358,8 @@ public partial class MainWindow : Window
 
 		// Install the new simulation.
 		_engine = newEngine;
+        _runSteps = spec.Steps;
+        _visualizeEvery = spec.VisualizeEvery;
 		_fieldBitmap = newFieldBitmap;
 		_intensityBitmap = newIntensityBitmap;
 
@@ -392,8 +370,8 @@ public partial class MainWindow : Window
 
 		// Release previous resources.
 		(oldEngine as IDisposable)?.Dispose();
-		oldFieldBitmap.Dispose();
-		oldIntensityBitmap.Dispose();
+		oldFieldBitmap?.Dispose();
+		oldIntensityBitmap?.Dispose();
 
 
 		_step = 0;
@@ -404,6 +382,16 @@ public partial class MainWindow : Window
 		if (!string.IsNullOrEmpty(note))
 		    Console.WriteLine(note);
 
+        _previewProject = project;
+        foreach (var canvas in new[] { FieldCanvas, IntensityCanvas })
+        {
+            canvas.Project = project;
+            canvas.CanvasWidth = spec.Width;
+            canvas.CanvasHeight = spec.Height;
+        }
+        _overlayEdges = paintedScene is null ? null : WaveDudeNext.Rendering.GlowingEdges.Compute(
+            paintedScene.Bgra, paintedScene.Width, paintedScene.Height, paintedScene.StrideBytes);
+        ResetTimeline();
 		RenderFrame();
 	}
     
@@ -411,6 +399,15 @@ public partial class MainWindow : Window
     private void Start_Click(object? sender,
         global::Avalonia.Interactivity.RoutedEventArgs e)
     {
+        StopPlayback();
+        if (_hasPendingChanges) ApplyPendingChanges();
+        if (_step >= _runSteps)
+        {
+            _engine.Reset();
+            _step = 0;
+            ResetTimeline();
+            RenderFrame();
+        }
         _timer.Start();
     }
 
@@ -426,6 +423,7 @@ public partial class MainWindow : Window
         _timer.Stop();
         _engine.Reset();
         _step = 0;
+        ResetTimeline();
         RenderFrame();
     }
     
@@ -456,9 +454,8 @@ public partial class MainWindow : Window
 		// Don't lose edits that haven't been applied yet.
 		if (_hasPendingChanges)
 		{
-		    StatusText.Text =
-		        "Apply your pending changes before Undo/Redo.";
-		    return;
+            _projectHistory.Record();
+            _hasPendingChanges = false;
 		}
 
 		try
@@ -477,13 +474,14 @@ public partial class MainWindow : Window
 
 		    // Undo/Redo updates the existing Project model.
 		    // Recreate the GPU simulation using restored values.
+            _sceneImageWatch.Attach(_loadedProject.Scene, PropertiesEditor.ProjectFolder, refresh: false);
 		    LoadSimulation(_loadedProject);
 
 		    // History may replace objects inside collections,
 		    // so rebuild the tree to avoid stale references.
 		    ProjectTreeControl.LoadProject(_loadedProject);
 
-		    PropertiesEditor.SelectedObject = null;
+		    SelectObject(null);
 
 		    // ProjectWatcher also observes Undo/Redo,
 		    // so clear its pending flags afterward.
@@ -516,235 +514,20 @@ public partial class MainWindow : Window
 
     private void UpdateSimulation()
     {
-        // Advance several simulation steps per display update.
-        for (int i = 0; i < 4; i++)
+        int steps = _runSteps;
+        int interval = _visualizeEvery;
+        int count = Math.Min(interval, Math.Max(0, steps - _step));
+        for (int i = 0; i < count; i++)
         {
             _engine.AdvanceOneStep();
+            _engine.SampleProbes();
             _step++;
         }
+        if (_step >= steps)
+            _timer.Stop();
 
         RenderFrame();
     }
     
     
-    /*
-    private void RenderFrame()
-	{
-	    _engine.PrepareFrame(true, true);
-
-	    DrawPlane(_fieldBitmap, _engine.FieldData, false);
-	    
-	    FieldImage.InvalidateVisual();
-		IntensityImage.InvalidateVisual();
-
-	    if (_engine.IntensityData is { } intensity)
-	    {
-		DrawPlane(_intensityBitmap, intensity, true);
-	    }
-
-	    // Tell Avalonia the images have changed.
-	    FieldImage.InvalidateVisual();
-	    IntensityImage.InvalidateVisual();
-	    
-	    
-	    // Diagnostic: force Avalonia to reattach the updated bitmaps.
-		if (_step % 20 == 0)
-		{
-			FieldImage.Source = null;
-			IntensityImage.Source = null;
-
-			FieldImage.Source = _fieldBitmap;
-			IntensityImage.Source = _intensityBitmap;
-		}
-
-	    StatusText.Text = $"{_engine.Description} | Step {_step}";
-	    
-	    
-		float maxField = 0f;
-
-		foreach (float value in _engine.FieldData)
-		{
-			maxField = MathF.Max(
-				maxField,
-				MathF.Abs(value));
-		}
-
-		StatusText.Text =
-			$"{_engine.Description} | " +
-			$"Step {_step} | " +
-			$"Max field: {maxField:E3}" + 
-			$"Visible max: {GetVisibleFieldMaximum():E3}";
-			
-	}
-*/
-
-
-	
-	private void RenderFrame()
-	{
-		_engine.PrepareFrame(true, true);
-
-		var size = new PixelSize(_engine.Width, _engine.Height);
-		var dpi = new Vector(96, 96);
-
-		var newField = new WriteableBitmap(
-		    size, dpi,
-		    PixelFormats.Bgra8888,
-		    AlphaFormat.Opaque);
-
-		var newIntensity = new WriteableBitmap(
-		    size, dpi,
-		    PixelFormats.Bgra8888,
-		    AlphaFormat.Opaque);
-
-		try
-		{
-		    DrawPlane(newField, _engine.FieldData, false);
-
-		    if (_engine.IntensityData is { } intensity)
-		    {
-		        DrawPlane(newIntensity, intensity, true);
-		    }
-
-		    var oldField = _fieldBitmap;
-		    var oldIntensity = _intensityBitmap;
-
-		    _fieldBitmap = newField;
-		    _intensityBitmap = newIntensity;
-
-		    FieldImage.Source = _fieldBitmap;
-		    IntensityImage.Source = _intensityBitmap;
-
-		    FieldImage.InvalidateVisual();
-		    IntensityImage.InvalidateVisual();
-
-		    oldField.Dispose();
-		    oldIntensity.Dispose();
-		}
-		catch
-		{
-		    newField.Dispose();
-		    newIntensity.Dispose();
-		    throw;
-		}
-
-		float visibleMax = GetVisibleFieldMaximum();
-
-		StatusText.Text =
-		    $"{_engine.Description} | " +
-		    $"Step {_step} | " +
-		    $"Visible max: {visibleMax:E3}";
-	}
-
-
-
-    private void DrawPlane(
-        WriteableBitmap bitmap,
-        float[] values,
-        bool intensity)
-    {
-        int width = _engine.Width;
-		int height = _engine.Height;
-        int stride = _engine.Stride;
-        int rim = _engine.Rim;
-
-        byte[] pixels = new byte[width * height * 4];
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                int src = (y + rim + 1) * stride
-                          + x + rim + 1;
-
-                float value = values[src];
-
-                float normalized = intensity
-                    ? MathF.Sqrt(MathF.Max(0, value)) * 8f
-                    : value * 8f;
-
-                normalized = Math.Clamp(normalized, -1f, 1f);
-
-                int dst = (y * width + x) * 4;
-
-                if (intensity)
-                {
-                    byte v = (byte)(
-                        Math.Clamp(normalized, 0f, 1f) * 255f
-                    );
-
-                    // Grayscale intensity
-                    pixels[dst] = v;
-                    pixels[dst + 1] = v;
-                    pixels[dst + 2] = v;
-                }
-                else
-                {
-                    // Negative waves blue, positive waves red.
-                    byte magnitude = (byte)(
-                        MathF.Abs(normalized) * 255f
-                    );
-
-                    pixels[dst] = normalized < 0 ? magnitude : (byte)0;
-                    pixels[dst + 1] = 0;
-                    pixels[dst + 2] = normalized > 0 ? magnitude : (byte)0;
-                }
-
-                pixels[dst + 3] = 255;
-            }
-        }
-        
-        
-        
-		int nonBlackPixels = 0;
-		int maxChannel = 0;
-
-		for (int i = 0; i < pixels.Length; i += 4)
-		{
-			int brightness = Math.Max(
-				pixels[i],
-				Math.Max(pixels[i + 1], pixels[i + 2]));
-
-			if (brightness > 0)
-				nonBlackPixels++;
-
-			maxChannel = Math.Max(maxChannel, brightness);
-		}
-
-		if (_step % 40 == 0)
-		{
-			Console.WriteLine(
-				$"{(intensity ? "Intensity" : "Field")} | " +
-				$"Non-black pixels: {nonBlackPixels} / {width * height} | " +
-				$"Max channel: {maxChannel}");
-		}
-        
-        
-        
-     
-
-        using var framebuffer = bitmap.Lock();
-
-        for (int y = 0; y < height; y++)
-        {
-            Marshal.Copy(
-                pixels,
-                y * width * 4,
-                IntPtr.Add(framebuffer.Address, y * framebuffer.RowBytes),
-                width * 4
-            );
-        }
-    }
-
-    protected override void OnClosed(EventArgs e)
-    {
-        _timer.Stop();
-        _fieldBitmap.Dispose();
-        _intensityBitmap.Dispose();
-        (_engine as IDisposable)?.Dispose();
-        _projectWatcher?.Dispose();
-        base.OnClosed(e);
-        
-    }
 }
-

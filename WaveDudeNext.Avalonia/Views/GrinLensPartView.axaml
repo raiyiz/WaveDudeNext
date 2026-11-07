@@ -1,0 +1,67 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.GrinLensPartView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:views="using:WaveDudeNext.Avalonia.Views"
+             xmlns:model="using:WaveDudeNext.Model"
+             Classes="wpfEditor" x:CompileBindings="False">
+    <UserControl.Resources><converters:ConditionConverter x:Key="Condition"/></UserControl.Resources>
+		<StackPanel Margin="8">
+			<views:PartCommonView />
+
+			<Label Classes="formSection" Content="{DynamicResource SectionMaterial}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.GrinLensPart.CentreIndex}" />
+				<NumericUpDown Value="{Binding CentreIndex, Mode=TwoWay}" Minimum="1" Maximum="2.55" Increment="0.01" ToolTip.Tip="{DynamicResource Hint.GrinLensPart.CentreIndex}" AutomationProperties.AutomationId="PartCentreIndex" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.GrinLensPart.EdgeIndex}" />
+				<NumericUpDown Value="{Binding EdgeIndex, Mode=TwoWay}" Minimum="1" Maximum="2.55" Increment="0.01" ToolTip.Tip="{DynamicResource Hint.GrinLensPart.EdgeIndex}" AutomationProperties.AutomationId="PartEdgeIndex" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.GrinLensPart.Coating}" />
+				<NumericUpDown Value="{Binding Coating, Mode=TwoWay}" Minimum="0" Maximum="50" ToolTip.Tip="{DynamicResource Hint.GrinLensPart.Coating}" AutomationProperties.AutomationId="PartCoating" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.CoatedPart.CoatingProfile}" />
+				<ComboBox Classes="enumComboBox" ItemsSource="{x:Static controls:EnumItems.CoatingProfile}" SelectedItem="{Binding CoatingProfile, Mode=TwoWay}"
+				          ToolTip.Tip="{DynamicResource Hint.CoatedPart.CoatingProfile}" AutomationProperties.AutomationId="PartCoatingProfile" />
+
+				<!-- the faces by their outward normal: the end faces across the axis are front and back, the long sides the sides -->
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.CoatedPart.FrontCoated}"
+				          IsChecked="{Binding FrontCoated, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.CoatedPart.FrontCoated}" AutomationProperties.AutomationId="PartFrontCoated" />
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.CoatedPart.BackCoated}"
+				          IsChecked="{Binding BackCoated, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.CoatedPart.BackCoated}" AutomationProperties.AutomationId="PartBackCoated" />
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.CoatedPart.SidesCoated}"
+				          IsChecked="{Binding SidesCoated, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.CoatedPart.SidesCoated}" AutomationProperties.AutomationId="PartSidesCoated" />
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionShape}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.GrinLensPart.Length}" />
+				<NumericUpDown Value="{Binding Length, Mode=TwoWay}" Minimum="1" Increment="10" ToolTip.Tip="{DynamicResource Hint.GrinLensPart.Length}" AutomationProperties.AutomationId="PartLength"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.GrinLensPart.Diameter}" />
+				<NumericUpDown Value="{Binding Diameter, Mode=TwoWay}" Minimum="2" Increment="10" ToolTip.Tip="{DynamicResource Hint.GrinLensPart.Diameter}" AutomationProperties.AutomationId="PartDiameter"  Maximum="2147483647"/>
+			</controls:FormPanel>
+		</StackPanel>
+
+</UserControl>

@@ -1,0 +1,143 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.SourceView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:panes="using:WaveDudeNext.Avalonia.Panes"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:localization="using:WaveDudeNext.Avalonia.Localization"
+             xmlns:model="using:WaveDudeNext.Model"
+             Classes="wpfEditor" x:CompileBindings="False">
+
+	<UserControl.Resources>
+        <converters:ConditionConverter x:Key="Condition"/>
+		<converters:WavelengthConverter x:Key="Wavelength" />
+		<!-- pulse settings only matter for a pulsed source -->
+
+
+	</UserControl.Resources>
+		<StackPanel Margin="8">
+			<Label Classes="formSection" Content="{DynamicResource SectionGeneral}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.Name}" />
+				<TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip.Tip="{DynamicResource Hint.Source.Name}" />
+
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.Source.Enabled}"
+				          IsChecked="{Binding Enabled, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Source.Enabled}" AutomationProperties.AutomationId="SourceEnabled" />
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionPosition}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.X}" />
+				<NumericUpDown Value="{Binding X, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.Source.X}" AutomationProperties.AutomationId="SourceX"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.Y}" />
+				<NumericUpDown Value="{Binding Y, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.Source.Y}"  Maximum="2147483647"/>
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionWave}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.Frequency}" />
+				<NumericUpDown Value="{Binding Frequency, Mode=TwoWay}" Minimum="0.01" Maximum="255" ToolTip.Tip="{DynamicResource Hint.Source.Frequency}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.Amplitude}" />
+				<NumericUpDown Value="{Binding Amplitude, Mode=TwoWay}" Minimum="0" Maximum="100" ToolTip.Tip="{DynamicResource Hint.Source.Amplitude}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.Phase}" />
+				<NumericUpDown Value="{Binding Phase, Mode=TwoWay}" Minimum="-180" Maximum="180" ToolTip.Tip="{DynamicResource Hint.Source.Phase}" />
+
+				<!-- read-only: the wavelength this frequency gives with the project's wave speed (Simulation.Wavelength) -->
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelWavelength}" />
+				<TextBlock VerticalAlignment="Center" ToolTip.Tip="{DynamicResource TipWavelength}"
+				           AutomationProperties.AutomationId="SourceWavelength">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource Wavelength}">
+							<Binding Path="Frequency" />
+							<Binding Path="Project.Simulation.WaveSpeed" RelativeSource="{RelativeSource AncestorType=panes:PropertiesPane, Tree=Logical}" />
+							<Binding Path="Project.Simulation.SourceFrequencyScale" RelativeSource="{RelativeSource AncestorType=panes:PropertiesPane, Tree=Logical}" />
+							<Binding Path="Project.Simulation.FourthOrderLaplacian" RelativeSource="{RelativeSource AncestorType=panes:PropertiesPane, Tree=Logical}" />
+							<!-- the language, so "(nominal)" is re-read on a switch -->
+
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionTiming}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.Mode}" />
+				<ComboBox Classes="enumComboBox" ItemsSource="{x:Static controls:EnumItems.SourceMode}"
+				          SelectedItem="{Binding Mode, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Source.Mode}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.PulseShape}" />
+				<ComboBox IsEnabled="{Binding Mode, Converter={StaticResource Condition}, ConverterParameter='True;Continuous=False'}" ItemsSource="{x:Static controls:EnumItems.PulseShape}"
+				          SelectedItem="{Binding PulseShape, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.Source.PulseShape}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.PulseWidth}" />
+				<NumericUpDown IsEnabled="{Binding Mode, Converter={StaticResource Condition}, ConverterParameter='True;Continuous=False'}" Value="{Binding PulseWidth, Mode=TwoWay}" Minimum="1" ToolTip.Tip="{DynamicResource Hint.Source.PulseWidth}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.OffWidth}" />
+				<NumericUpDown IsEnabled="{Binding Mode, Converter={StaticResource Condition}, ConverterParameter='True;Continuous=False'}" Value="{Binding OffWidth, Mode=TwoWay}" Minimum="1" ToolTip.Tip="{DynamicResource Hint.Source.OffWidth}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.Source.DetachAfter}" />
+				<NumericUpDown Value="{Binding DetachAfter, Mode=TwoWay}" Minimum="-1" ToolTip.Tip="{DynamicResource Hint.Source.DetachAfter}"  Maximum="2147483647"/>
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionArray}" />
+			<CheckBox Content="{DynamicResource Label.Source.IsComposite}" IsChecked="{Binding IsComposite, Mode=TwoWay}"
+			          ToolTip.Tip="{DynamicResource Hint.Source.IsComposite}" Margin="0,0,0,4" />
+			<!-- the array's own settings; empty and disabled while there is no array -->
+			<controls:FormPanel DataContext="{Binding Array}"
+			                    IsEnabled="{Binding DataContext.IsComposite, RelativeSource={RelativeSource AncestorType=UserControl}}">
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.SourceArray.SizeX}" />
+				<NumericUpDown Value="{Binding SizeX, Mode=TwoWay}" Minimum="1" ToolTip.Tip="{DynamicResource Hint.SourceArray.SizeX}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.SourceArray.SizeY}" />
+				<NumericUpDown Value="{Binding SizeY, Mode=TwoWay}" Minimum="1" ToolTip.Tip="{DynamicResource Hint.SourceArray.SizeY}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.SourceArray.SpacingX}" />
+				<NumericUpDown Value="{Binding SpacingX, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.SourceArray.SpacingX}"  Minimum="-2147483648" Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.SourceArray.SpacingY}" />
+				<NumericUpDown Value="{Binding SpacingY, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.SourceArray.SpacingY}"  Minimum="-2147483648" Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.SourceArray.Angle}" />
+				<NumericUpDown Value="{Binding Angle, Mode=TwoWay}" Minimum="-180" Maximum="180" Increment="5" ToolTip.Tip="{DynamicResource Hint.SourceArray.Angle}" />
+
+				<!-- the four random amounts are offsets added per emitter on top of the values above (the author's point 9) -->
+				<Label controls:FormPanel.FullWidth="True" Classes="formSection" Content="{DynamicResource SectionRandom}" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.SourceArray.RandomFrequency}" />
+				<NumericUpDown Value="{Binding RandomFrequency, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.SourceArray.RandomFrequency}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.SourceArray.RandomPhase}" />
+				<NumericUpDown Value="{Binding RandomPhase, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.SourceArray.RandomPhase}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.SourceArray.RandomOffWidth}" />
+				<NumericUpDown Value="{Binding RandomOffWidth, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.SourceArray.RandomOffWidth}"  Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.SourceArray.RandomPosition}" />
+				<NumericUpDown Value="{Binding RandomPosition, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.SourceArray.RandomPosition}"  Maximum="2147483647"/>
+			</controls:FormPanel>
+		</StackPanel>
+
+</UserControl>

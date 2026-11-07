@@ -1,0 +1,64 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.PartPointsView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:commands="using:WaveDudeNext.Avalonia.Commands"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:model="using:WaveDudeNext.Model"
+             Classes="wpfEditor" x:CompileBindings="False">
+    <UserControl.Resources><converters:ConditionConverter x:Key="Condition"/></UserControl.Resources>
+
+
+
+	<!-- the point list of a polygon outline (the data context is the part): one row per point with X
+	     and Y relative to the centre, before rotation, a remove button, and an add button below -->
+	<StackPanel>
+		<Label Classes="formSection" Content="{DynamicResource SectionPoints}" />
+		<TextBlock Margin="0,0,0,4" Foreground="{DynamicResource GrayText}" TextWrapping="Wrap" Text="{Binding HintText, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+		<DockPanel Margin="0,0,0,2">
+			<Border DockPanel.Dock="Right" Width="22" />
+			<UniformGrid Columns="2">
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.PartPoint.X}" Margin="2,0" />
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.PartPoint.Y}" Margin="2,0" />
+			</UniformGrid>
+		</DockPanel>
+		<ItemsControl x:Name="list" ItemsSource="{Binding Points}" Focusable="False">
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<DockPanel Margin="0,0,0,4">
+						<Button DockPanel.Dock="Right" Content="×" Padding="5,0" ToolTip.Tip="{DynamicResource TipRemovePoint}" AutomationProperties.Name="{DynamicResource TipRemovePoint}"
+						        Click="OnRemovePoint" />
+						<UniformGrid Columns="2">
+							<NumericUpDown Margin="0,0,2,0" Value="{Binding X, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.PartPoint.X}"  Minimum="-2147483648" Maximum="2147483647"/>
+							<NumericUpDown Margin="2,0,0,0" Value="{Binding Y, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.PartPoint.Y}"  Minimum="-2147483648" Maximum="2147483647"/>
+						</UniformGrid>
+					</DockPanel>
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
+		<StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+			<Button Padding="8,2" Margin="0,2,6,0" Content="{DynamicResource ButtonAddPoint}" ToolTip.Tip="{DynamicResource TipAddPoint}"
+			        Click="OnAddPoint" AutomationProperties.AutomationId="PartAddPoint" />
+		</StackPanel>
+	</StackPanel>
+</UserControl>

@@ -1,71 +1,66 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
 
-<UserControl xmlns="https://github.com/avaloniaui"
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.PartCommonView"
+             xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="WaveDudeNext.Avalonia.Views.PartCommonView"
-             x:CompileBindings="False">
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:model="using:WaveDudeNext.Model"
+             Classes="wpfEditor" x:CompileBindings="False"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:localization="using:WaveDudeNext.Avalonia.Localization"
+             xmlns:p="using:WaveDudeNext.Avalonia">
 
-    <StackPanel Spacing="10">
+	<UserControl.Resources>
+        <converters:ConditionConverter x:Key="Condition"/>
+		<converters:KindDescriptionConverter x:Key="KindDescription" />
 
-        <TextBlock Text="General"
-                   FontWeight="Bold"
-                   FontSize="15"/>
+	</UserControl.Resources>
 
-        <Grid ColumnDefinitions="*,120"
-              RowDefinitions="Auto,Auto"
-              ColumnSpacing="8"
-              RowSpacing="8">
+	<!-- the members every part has: name, enabled, centre and angle; placed first in each kind's form -->
+	<StackPanel>
+		<!-- what this kind is (2026-10-29, the user's choice, beside the Add part menu's tooltips): the Kind.<Type> string under a
+		     header whose chevron turns while it is open; open or closed is one user setting for every kind -->
+        <Expander Header="{DynamicResource SectionDescription}" IsExpanded="False" Margin="0,0,0,6">
+            <TextBlock TextWrapping="Wrap" Text="{Binding Converter={StaticResource KindDescription}}"/>
+        </Expander>
 
-            <TextBlock Text="Name"
-                       VerticalAlignment="Center"/>
+		<Label Classes="formSection" Content="{DynamicResource SectionGeneral}" />
+		<controls:FormPanel>
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.OpticalPart.Name}" />
+			<TextBox Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ToolTip.Tip="{DynamicResource Hint.OpticalPart.Name}" AutomationProperties.AutomationId="PartName" />
 
-            <TextBox Grid.Column="1"
-         	Text="{Binding Name, Mode=TwoWay,
-                        UpdateSourceTrigger=LostFocus}"/>
+			<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.OpticalPart.Enabled}"
+			          IsChecked="{Binding Enabled, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.OpticalPart.Enabled}" AutomationProperties.AutomationId="PartEnabled" />
+		</controls:FormPanel>
 
-            <TextBlock Grid.Row="1"
-                       Text="Enabled"
-                       VerticalAlignment="Center"/>
+		<Label Classes="formSection" Content="{DynamicResource SectionPosition}" />
+		<controls:FormPanel>
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.OpticalPart.X}" />
+			<NumericUpDown Value="{Binding X, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.OpticalPart.X}" AutomationProperties.AutomationId="PartX"  Maximum="2147483647"/>
 
-            <CheckBox Grid.Row="1"
-          		Grid.Column="1"
-          		IsChecked="{Binding Enabled, Mode=TwoWay}"/>
-        </Grid>
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.OpticalPart.Y}" />
+			<NumericUpDown Value="{Binding Y, Mode=TwoWay}" Minimum="0" ToolTip.Tip="{DynamicResource Hint.OpticalPart.Y}" AutomationProperties.AutomationId="PartY"  Maximum="2147483647"/>
 
-        <TextBlock Text="Position"
-                   FontWeight="Bold"
-                   Margin="0,8,0,0"/>
-
-        <Grid ColumnDefinitions="*,120"
-              RowDefinitions="Auto,Auto,Auto"
-              ColumnSpacing="8"
-              RowSpacing="8">
-
-            <TextBlock Text="X"
-                       VerticalAlignment="Center"/>
-
-            <TextBox Grid.Column="1"
-                     Text="{Binding X, Mode=OneWay}"
-                     IsReadOnly="True"/>
-
-            <TextBlock Grid.Row="1"
-                       Text="Y"
-                       VerticalAlignment="Center"/>
-
-            <TextBox Grid.Row="1"
-                     Grid.Column="1"
-                     Text="{Binding Y, Mode=OneWay}"
-                     IsReadOnly="True"/>
-
-            <TextBlock Grid.Row="2"
-                       Text="Angle"
-                       VerticalAlignment="Center"/>
-
-            <TextBox Grid.Row="2"
-                     Grid.Column="1"
-                     Text="{Binding Angle, Mode=OneWay}"
-                     IsReadOnly="True"/>
-        </Grid>
-
-    </StackPanel>
+			<TextBlock Classes="formLabel" Text="{DynamicResource Label.OpticalPart.Angle}" />
+			<NumericUpDown Value="{Binding Angle, Mode=TwoWay}" Minimum="-180" Maximum="180" Increment="5" ToolTip.Tip="{DynamicResource Hint.OpticalPart.Angle}" AutomationProperties.AutomationId="PartAngleBox" />
+		</controls:FormPanel>
+	</StackPanel>
 </UserControl>
-

@@ -20,6 +20,15 @@ public partial class PropertiesPane : UserControl
         AvaloniaProperty.Register<PropertiesPane, Project?>(
             nameof(Project));
 
+    public static readonly StyledProperty<string?> ProjectFolderProperty =
+        AvaloniaProperty.Register<PropertiesPane, string?>(nameof(ProjectFolder));
+
+    public string? ProjectFolder
+    {
+        get => GetValue(ProjectFolderProperty);
+        set => SetValue(ProjectFolderProperty, value);
+    }
+
     public PropertiesPane()
     {
         InitializeComponent();

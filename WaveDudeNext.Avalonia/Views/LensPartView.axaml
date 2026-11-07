@@ -1,0 +1,114 @@
+<!--
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 Alexander Graef <alex@graef.cc>
+
+This file is part of WaveDude Next, a 2D wave simulator.
+
+Based on the work of
+  Jeroen Vleggaar (Huygens Optics), author of Wave Dude 2D, Copyright (C) 2026
+    <https://www.youtube.com/@HuygensOptics>, <https://www.huygensoptics.com>
+  0x23 (Diffraction Limited), author of WaveSimulator2D
+    <https://www.youtube.com/@DiffractionLimited>, <https://github.com/0x23/WaveSimulator2D>
+
+WaveDude Next is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. It is distributed WITHOUT ANY WARRANTY. See the LICENSE.md file or
+<https://www.gnu.org/licenses/>.
+-->
+
+<UserControl x:Class="WaveDudeNext.Avalonia.Views.LensPartView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:WaveDudeNext.Avalonia.Controls"
+             xmlns:converters="using:WaveDudeNext.Avalonia.Converters"
+             xmlns:meta="using:WaveDudeNext.Avalonia.Markup"
+             xmlns:views="using:WaveDudeNext.Avalonia.Views"
+             xmlns:model="using:WaveDudeNext.Model"
+             Classes="wpfEditor" x:CompileBindings="False"
+             xmlns:commands="using:WaveDudeNext.Avalonia.Commands">
+
+	<!-- the Mirror box's command: the name follows the flag (2026-10-29, the user's design) -->
+
+
+	<UserControl.Resources>
+        <converters:ConditionConverter x:Key="Condition"/>
+		<converters:LensEdgeConverter x:Key="EdgeThickness" />
+		<!-- a mirror has no index, no coating and no absorption -->
+
+
+
+	</UserControl.Resources>
+		<StackPanel Margin="8">
+			<views:PartCommonView />
+
+			<Label Classes="formSection" Content="{DynamicResource SectionMaterial}" />
+			<controls:FormPanel>
+				<!-- the box toggles the flag through its binding, then its command renames the part to match (Lens 1 to Mirror 1 and back) -->
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.LensPart.Mirror}"
+				          IsChecked="{Binding Mirror, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.LensPart.Mirror}" AutomationProperties.AutomationId="PartMirror"
+				          Click="OnMirrorToggled" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LensPart.RefractiveIndex}" />
+				<NumericUpDown IsEnabled="{Binding Mirror, Converter={StaticResource Condition}, ConverterParameter='True;True=False'}" Value="{Binding RefractiveIndex, Mode=TwoWay}" Minimum="1" Maximum="2.55" Increment="0.01"
+				                    ToolTip.Tip="{DynamicResource Hint.LensPart.RefractiveIndex}" AutomationProperties.AutomationId="PartIndex" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LensPart.Coating}" />
+				<NumericUpDown IsEnabled="{Binding Mirror, Converter={StaticResource Condition}, ConverterParameter='True;True=False'}" Value="{Binding Coating, Mode=TwoWay}" Minimum="0" Maximum="50"
+				                    ToolTip.Tip="{DynamicResource Hint.LensPart.Coating}" AutomationProperties.AutomationId="PartCoating" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.CoatedPart.CoatingProfile}" />
+				<ComboBox IsEnabled="{Binding Mirror, Converter={StaticResource Condition}, ConverterParameter='True;True=False'}" ItemsSource="{x:Static controls:EnumItems.CoatingProfile}" SelectedItem="{Binding CoatingProfile, Mode=TwoWay}"
+				          ToolTip.Tip="{DynamicResource Hint.CoatedPart.CoatingProfile}" AutomationProperties.AutomationId="PartCoatingProfile" />
+
+				<!-- the faces: the first surface is the front, the second the back, the rim the sides (2026-10-29) -->
+				<CheckBox controls:FormPanel.FullWidth="True" IsEnabled="{Binding Mirror, Converter={StaticResource Condition}, ConverterParameter='True;True=False'}" Content="{DynamicResource Label.CoatedPart.FrontCoated}"
+				          IsChecked="{Binding FrontCoated, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.CoatedPart.FrontCoated}" AutomationProperties.AutomationId="PartFrontCoated" />
+				<CheckBox controls:FormPanel.FullWidth="True" IsEnabled="{Binding Mirror, Converter={StaticResource Condition}, ConverterParameter='True;True=False'}" Content="{DynamicResource Label.CoatedPart.BackCoated}"
+				          IsChecked="{Binding BackCoated, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.CoatedPart.BackCoated}" AutomationProperties.AutomationId="PartBackCoated" />
+				<CheckBox controls:FormPanel.FullWidth="True" IsEnabled="{Binding Mirror, Converter={StaticResource Condition}, ConverterParameter='True;True=False'}" Content="{DynamicResource Label.CoatedPart.SidesCoated}"
+				          IsChecked="{Binding SidesCoated, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.CoatedPart.SidesCoated}" AutomationProperties.AutomationId="PartSidesCoated" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LensPart.Absorption}" />
+				<NumericUpDown IsEnabled="{Binding Mirror, Converter={StaticResource Condition}, ConverterParameter='True;True=False'}" Value="{Binding Absorption, Mode=TwoWay}" Minimum="0" Maximum="255" Increment="5"
+				                    ToolTip.Tip="{DynamicResource Hint.LensPart.Absorption}" AutomationProperties.AutomationId="PartAbsorption" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LensPart.AbsorptionRamp}" />
+				<NumericUpDown IsEnabled="{Binding Mirror, Converter={StaticResource Condition}, ConverterParameter='True;True=False'}" Value="{Binding AbsorptionRamp, Mode=TwoWay}" Minimum="1" Maximum="400" Increment="5"
+				                    ToolTip.Tip="{DynamicResource Hint.LensPart.AbsorptionRamp}" AutomationProperties.AutomationId="PartAbsorptionRamp" />
+			</controls:FormPanel>
+
+			<Label Classes="formSection" Content="{DynamicResource SectionShape}" />
+			<controls:FormPanel>
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LensPart.Diameter}" />
+				<NumericUpDown Value="{Binding Diameter, Mode=TwoWay}" Minimum="2" Increment="10" ToolTip.Tip="{DynamicResource Hint.LensPart.Diameter}" AutomationProperties.AutomationId="PartDiameter"  Maximum="2147483647"/>
+
+				<!-- the lens's state in one box: on for a diverging lens; ticking it flips both radii -->
+				<CheckBox controls:FormPanel.FullWidth="True" Content="{DynamicResource Label.LensPart.IsConcave}"
+				          IsChecked="{Binding IsConcave, Mode=TwoWay}" ToolTip.Tip="{DynamicResource Hint.LensPart.IsConcave}" AutomationProperties.AutomationId="PartConcave" />
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LensPart.R1}" />
+				<NumericUpDown Value="{Binding R1, Mode=TwoWay}" Increment="10" ToolTip.Tip="{DynamicResource Hint.LensPart.R1}" AutomationProperties.AutomationId="PartR1"  Minimum="-2147483648" Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LensPart.R2}" />
+				<NumericUpDown Value="{Binding R2, Mode=TwoWay}" Increment="10" ToolTip.Tip="{DynamicResource Hint.LensPart.R2}" AutomationProperties.AutomationId="PartR2"  Minimum="-2147483648" Maximum="2147483647"/>
+
+				<TextBlock Classes="formLabel" Text="{DynamicResource Label.LensPart.Thickness}" />
+				<NumericUpDown Value="{Binding Thickness, Mode=TwoWay}" Minimum="1" ToolTip.Tip="{DynamicResource Hint.LensPart.Thickness}" AutomationProperties.AutomationId="PartThickness"  Maximum="2147483647"/>
+
+				<!-- read-only: what the radii leave at the rim; 0 when the surfaces meet there -->
+				<TextBlock Classes="formLabel" Text="{DynamicResource LabelEdgeThickness}" />
+				<TextBlock Classes="formReadout" ToolTip.Tip="{DynamicResource TipEdgeThickness}" AutomationProperties.AutomationId="PartEdgeThickness">
+					<TextBlock.Text>
+						<MultiBinding Converter="{StaticResource EdgeThickness}">
+							<Binding Path="Diameter" />
+							<Binding Path="Thickness" />
+							<Binding Path="R1" />
+							<Binding Path="R2" />
+						</MultiBinding>
+					</TextBlock.Text>
+				</TextBlock>
+			</controls:FormPanel>
+		</StackPanel>
+
+</UserControl>
