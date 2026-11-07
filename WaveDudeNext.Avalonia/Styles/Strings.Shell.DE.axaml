@@ -173,4 +173,6 @@
     <x:String x:Key="Shell.Hidethisgraph">Dieses Diagramm ausblenden</x:String>
     <x:String x:Key="Shell.Hidethisdrawing">Diese Zeichnung ausblenden</x:String>
     <x:String x:Key="Shell.Showgraphoversimulation">Diagramm über der Simulation anzeigen</x:String>
+    <x:String x:Key="Shell.step0">Schritt {0}</x:String>
+    <x:String x:Key="Shell.Theselectedrangehasnotbeencomputedyet">Der ausgewählte Bereich wurde noch nicht berechnet.</x:String>
 </ResourceDictionary>

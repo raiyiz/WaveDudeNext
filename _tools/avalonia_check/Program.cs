@@ -243,6 +243,10 @@ sealed class WorkspaceCheckApp : App
         {
             try
             {
+                // Keep both ends of the ruler reachable by real pointer input on the virtual screen.
+                var screen = window.Screens.Primary ?? window.Screens.All.FirstOrDefault();
+                window.Width = Math.Min(window.Width, screen is null ? 1200 : screen.WorkingArea.Width / window.RenderScaling);
+                window.Position = new PixelPoint(screen?.WorkingArea.X ?? 0, screen?.WorkingArea.Y ?? 0);
                 await Task.Delay(150);
                 void Check(bool ok, string message)
                 {
@@ -258,6 +262,8 @@ sealed class WorkspaceCheckApp : App
                 Invoke("PreviewQuality_Click", new MenuItem { Tag = "Full" });
                 var project = (Project)Field("_loadedProject")!;
                 Check(project.Sources.Count == 1, "Startup is an editable project");
+                Check(window.FindControl<NumericUpDown>("PlaybackSpeed")!.GetVisualDescendants().OfType<TextBox>().Any(text => text.Text == "1"), "Default playback speed is visible before editing");
+                Check(window.FindControl<NumericUpDown>("FramePosition")!.GetVisualDescendants().OfType<TextBox>().Any(text => text.Text == "0"), "Initial frame position is visible before scrubbing");
                 window.FindControl<CheckBox>("AutoApply")!.IsChecked = false;
                 var field = window.FindControl<Image>("FieldImage")!;
                 var intensity = window.FindControl<Image>("IntensityImage")!;
@@ -281,7 +287,7 @@ sealed class WorkspaceCheckApp : App
                 var traces = (System.Collections.Generic.Dictionary<Probe, WaveDudeNext.Probes.ProbeTrace>)Field("_probeTraces")!;
                 Check(traces.Count == 1 && traces.Values.Single().Series.Count == 10, "Probes record a sample for each simulation step");
                 Check(frames.Count == 6, "Timeline records initial and simulated frames");
-                window.FindControl<Slider>("TimelineSlider")!.Value = 2;
+                window.FindControl<TimelineBar>("TimelineSlider")!.Value = 2;
                 Check((int)Field("_viewFrame")! == 2, "Timeline scrubs to an earlier stored frame");
                 Check(window.FindControl<MenuItem>("ExamplesMenu")!.Items.Count > 0, "Bundled examples are available");
                 var overlayCanvas = window.FindControl<SceneCanvas>("FieldCanvas")!;
@@ -405,6 +411,7 @@ sealed class WorkspaceCheckApp : App
                     await Drag(Header("Properties", dock.FloatingWindows[0]), targetHost.PointToScreen(new Point(8, targetHost.Bounds.Height / 2)));
                     Check(dock.FloatingWindows.Count == 0 && Group(dock.CaptureLayout().Root, "Field") != Group(dock.CaptureLayout().Root, "Properties"), "Floating pane mouse drag docks beside a target");
                     dock.Reset(); await Task.Delay(100);
+                    window.FindControl<WaveDudeNext.Avalonia.Panes.ProjectTree>("ProjectTreeControl")!.SelectModel(project.Scene);
                     var probeCanvas = window.FindControl<WaveDudeNext.Avalonia.Controls.SceneCanvas>("FieldCanvas")!;
                     var probe = project.Probes[0];
                     var graph = probeCanvas.GraphRect(probe);
@@ -443,6 +450,75 @@ sealed class WorkspaceCheckApp : App
                     probeCanvas.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Escape });
                     var canvasPeer = global::Avalonia.Automation.Peers.ControlAutomationPeer.CreatePeerForElement(probeCanvas)!;
                     Check(canvasPeer.GetName().Contains(lens.Name) && canvasPeer.GetHelpText().Length > 0, "Preview automation describes selection and keyboard editing");
+                    var timeline = window.FindControl<TimelineBar>("TimelineSlider")!;
+                    Invoke("ClearRange_Click");
+                    Check(timeline.Maximum > timeline.Available && timeline.Available > 10, "Timeline ruler spans the full run and tracks the computed portion separately");
+                    Check(TimelineBar.TickInterval(4999, 1250) == 500 && TimelineBar.TickInterval(4, 800) == 1, "Frame ruler chooses readable numbered tick intervals for short and long runs");
+                    async Task DragFrame(int from, int to)
+                    {
+                        var first = timeline.PointToScreen(new Point(timeline.FrameX(from), 34));
+                        var last = timeline.PointToScreen(new Point(timeline.FrameX(to), 34));
+                        await Mouse("mousemove", "--sync", first.X.ToString(), first.Y.ToString(), "mousedown", "1");
+                        await Mouse("mousemove", "--sync", last.X.ToString(), last.Y.ToString(), "mouseup", "1");
+                    }
+                    await DragFrame(10, 15);
+                    Check(Math.Abs((int)Field("_viewFrame")! - 15) <= 1 && !(bool)Field("_followSimulation")!, "Dragging the numbered ruler scrubs frames and disables live-follow");
+                    await DragFrame(0, 4);
+                    Check(Math.Abs((int)Field("_playIn")! - 4) <= 1, "Dragging the blue in bracket changes the export start");
+                    await DragFrame(timeline.LastFrame, 20);
+                    Check(Field("_playOut") is int outFrame && Math.Abs(outFrame - 20) <= 1 && timeline.RangeEnd == outFrame, "Dragging the blue out bracket changes the export end");
+                    await Mouse("key", "x");
+                    Check((int)Field("_playIn")! == 0 && Field("_playOut") is null && timeline.RangeEnd == -1, "X clears the range brackets back to the whole run");
+                    window.FindControl<NumericUpDown>("FramePosition")!.Value = 7;
+                    Check((int)Field("_viewFrame")! == 7 && window.FindControl<TextBlock>("StepText")!.Text == "step 14", "Exact frame entry synchronizes the playhead and simulation-step readout");
+                    var rangePeer = global::Avalonia.Automation.Peers.ControlAutomationPeer.CreatePeerForElement(timeline)!;
+                    Check(rangePeer is global::Avalonia.Automation.Provider.IRangeValueProvider, "Timeline exposes an accessible range-value provider");
+                    ((global::Avalonia.Automation.Provider.IRangeValueProvider)rangePeer).SetValue(8);
+                    Check((int)Field("_viewFrame")! == 8, "Accessibility tools can seek directly to a frame");
+                    timeline.Focus();
+                    await Mouse("key", "i");
+                    Check((int)Field("_playIn")! == 8, "I marks the playhead as the in point");
+                    await Mouse("key", "period", "o");
+                    Check((int)Field("_viewFrame")! == 9 && (int)Field("_playOut")! == 9, "Period steps forward and O marks the out point");
+                    await Mouse("key", "comma");
+                    Check((int)Field("_viewFrame")! == 8, "Comma steps backward one frame");
+                    Invoke("PlaybackPreset_Click", new Button { Tag = "2" });
+                    var playback = (DispatcherTimer)Field("_playbackTimer")!;
+                    Check(window.FindControl<NumericUpDown>("PlaybackSpeed")!.Value == 2 && Math.Abs(playback.Interval.TotalMilliseconds - 1000d / (project.Display.Video.Fps * 2)) < 0.1, "Speed presets update typed speed and playback timing immediately");
+                    Invoke("PlaybackPreset_Click", new Button { Tag = "1" });
+                    Check(window.FindControl<NumericUpDown>("PlaybackSpeed")!.GetVisualDescendants().OfType<TextBox>().Any(text => text.Text == "1"), "Playback speed is visible in its editable numeric control");
+                    Invoke("Play_Click"); await Task.Delay(180);
+                    Check(!playback.IsEnabled && (int)Field("_viewFrame")! == 9, "Playback pauses at the selected out point");
+                    window.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("LoopPlayback")!.IsChecked = true;
+                    Invoke("Play_Click"); await Task.Delay(150);
+                    Check(playback.IsEnabled && (int)Field("_viewFrame")! is >= 8 and <= 9, "Loop playback stays inside the selected in/out range");
+                    Invoke("PausePlayback_Click");
+                    Check(!playback.IsEnabled, "Separate playback pause button stops playback");
+                    window.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("LoopPlayback")!.IsChecked = false;
+                    Invoke("ClearRange_Click");
+                    window.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("LiveFollow")!.IsChecked = true;
+                    Invoke("LiveFollow_Click");
+                    Check((bool)Field("_followSimulation")! && (int)Field("_viewFrame")! == timeline.LastAvailable, "Live-follow jumps to the newest computed frame");
+                    window.FindControl<NumericUpDown>("FramePosition")!.Value = 5;
+                    Invoke("UpdateSimulation");
+                    Check(!(bool)Field("_followSimulation")! && (int)Field("_viewFrame")! == 5, "A manually selected frame remains positioned while new frames are computed");
+                    Invoke("StackedPreviews_Click"); await Task.Delay(80);
+                    Check(dock.AreStacked("Field", "Intensity") == true, "Timeline layout button stacks field above intensity");
+                    Invoke("SideBySide_Click"); await Task.Delay(80);
+                    Check(dock.AreStacked("Field", "Intensity") == false, "Timeline layout button restores side-by-side previews");
+                    var fieldToggle = window.FindControl<global::Avalonia.Controls.Primitives.ToggleButton>("ShowFieldButton")!;
+                    fieldToggle.IsChecked = false; Invoke("TogglePreview_Click", fieldToggle); await Task.Delay(50);
+                    Check(!dock.IsPaneVisible("Field") && dock.IsPaneVisible("Intensity"), "Timeline picture toggle hides field without hiding intensity");
+                    fieldToggle.IsChecked = true; Invoke("TogglePreview_Click", fieldToggle); await Task.Delay(80);
+                    Check(dock.IsPaneVisible("Field") && dock.AreStacked("Field", "Intensity") == false, "Timeline picture toggle restores field in the selected layout");
+                    Invoke("TimelineRun_Click");
+                    Check((int)Field("_step")! == 0 && ((DispatcherTimer)Field("_timer")!).IsEnabled, "Timeline Run starts a new simulation from the beginning");
+                    Invoke("Pause_Click");
+                    Check(!((DispatcherTimer)Field("_timer")!).IsEnabled, "Simulation pause operates independently of playback pause");
+                    Invoke("Pause_Click");
+                    Check(((DispatcherTimer)Field("_timer")!).IsEnabled, "Simulation pause button resumes its paused run without resetting it");
+                    Invoke("Pause_Click");
+
                 }
                 Invoke("Theme_Click", new MenuItem { Tag = "Light" });
                 Check(window.RequestedThemeVariant == global::Avalonia.Styling.ThemeVariant.Light, "Theme switching applies to the workspace");
@@ -473,8 +549,8 @@ sealed class WorkspaceCheckApp : App
                 Invoke("PreviewQuality_Click", new MenuItem { Tag = "Economy" });
                 Invoke("UpdateSimulation");
                 var reduced = (FrameStore)Field("_frames")!;
-                Check(window.FindControl<Slider>("TimelineSlider")!.Maximum == 2 && reduced.Count == 2, "Economy timeline retains full frame numbering with repeated stored frames");
-                window.FindControl<Slider>("TimelineSlider")!.Value = 1;
+                Check(window.FindControl<TimelineBar>("TimelineSlider")!.Available == 2 && reduced.Count == 2, "Economy timeline retains full frame numbering with repeated stored frames");
+                window.FindControl<TimelineBar>("TimelineSlider")!.Value = 1;
                 Check((int)typeof(MainWindow).GetMethod("StoredFrameForTimeline", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(window, new object[] { 1 })! == 0, "Missing timeline frames use the preceding stored frame");
                 project.Simulation.Steps = 12;
                 var stillMethod = typeof(MainWindow).GetMethod("RenderCurrentFrameForExport", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;

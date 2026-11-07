@@ -173,4 +173,6 @@
     <x:String x:Key="Shell.Hidethisgraph">Masquer ce graphique</x:String>
     <x:String x:Key="Shell.Hidethisdrawing">Masquer cette annotation</x:String>
     <x:String x:Key="Shell.Showgraphoversimulation">Afficher le graphique sur la simulation</x:String>
+    <x:String x:Key="Shell.step0">pas {0}</x:String>
+    <x:String x:Key="Shell.Theselectedrangehasnotbeencomputedyet">La plage sélectionnée n’a pas encore été calculée.</x:String>
 </ResourceDictionary>

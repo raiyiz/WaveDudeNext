@@ -50,7 +50,7 @@ public partial class MainWindow
         _dock.Register("Intensity", UiText.Text("Intensity"), IntensityHost); _dock.Register("Properties", UiText.Text("Properties"), PropertiesHost);
         WorkspaceGrid.Children.Add(_dock);
         _dock.Reset(_desktop.TabbedPreviews);
-        _dock.LayoutChanged += () => { if (_dockReady && !_closingWorkspace) { _pendingProbeLayout = null; _desktop.DockLayout = _dock.CaptureLayout(); SaveDesktop(); } };
+        _dock.LayoutChanged += () => { if (_dockReady && !_closingWorkspace) { _pendingProbeLayout = null; _desktop.DockLayout = _dock.CaptureLayout(); SaveDesktop(); UpdateTimelineControls(); } };
         _dock.DragStatusChanged += text => { if (text.Length > 0) StatusText.Text = text; };
         foreach (var canvas in new[] { FieldCanvas, IntensityCanvas })
             canvas.ProbeViewportRequested += probe => OpenProbeViewport(probe);
@@ -158,6 +158,6 @@ public partial class MainWindow
     private void TabbedPreviews_Click(object? sender, RoutedEventArgs e)
     { _dock.Show("Field"); _dock.Dock("Intensity", "Field", DockSide.Tab); _desktop.TabbedPreviews = true; }
     private void SideBySide_Click(object? sender, RoutedEventArgs e)
-    { _dock.Show("Field"); _dock.Dock("Intensity", "Field", DockSide.Right); _desktop.TabbedPreviews = false; }
+    { _desktop.PreviewStacked = false; _dock.Show("Field"); _dock.Dock("Intensity", "Field", DockSide.Right); _desktop.TabbedPreviews = false; UpdateTimelineControls(); }
     private void ResetLayout_Click(object? sender, RoutedEventArgs e) { _dock.Reset(); _desktop.TabbedPreviews = false; }
 }

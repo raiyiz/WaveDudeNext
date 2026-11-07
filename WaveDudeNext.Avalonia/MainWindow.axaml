@@ -58,7 +58,7 @@
                 <MenuItem Header="{DynamicResource Shell.Addcolourscheme}" Click="AddScheme_Click"><MenuItem.Icon><controls:IconView Drawing="Palette"/></MenuItem.Icon></MenuItem>
             </MenuItem>
             <MenuItem Header="{DynamicResource MenuSimulation}">
-                <MenuItem Header="{DynamicResource DialogRun}" Click="Start_Click"><MenuItem.Icon><controls:IconView Drawing="Play"/></MenuItem.Icon></MenuItem>
+                <MenuItem Header="{DynamicResource DialogRun}" Click="TimelineRun_Click"><MenuItem.Icon><controls:IconView Drawing="Play"/></MenuItem.Icon></MenuItem>
                 <MenuItem Header="{DynamicResource MenuSimulationPause}" Click="Pause_Click"><MenuItem.Icon><controls:IconView Drawing="Pause"/></MenuItem.Icon></MenuItem>
                 <MenuItem Header="{DynamicResource Shell.AccessReset}" Click="Reset_Click"><MenuItem.Icon><controls:IconView Drawing="Reset"/></MenuItem.Icon></MenuItem>
                 <MenuItem Header="{DynamicResource Shell.Rerecordprobes}" Click="RerunProbes_Click"><MenuItem.Icon><controls:IconView Drawing="Probe"/></MenuItem.Icon></MenuItem>
@@ -85,7 +85,7 @@
                 <Button Click="OpenProject_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Open"/><TextBlock Text="{DynamicResource Shell.Open}"/></StackPanel></Button>
                 <Button Click="SaveProject_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Save"/><TextBlock Text="{DynamicResource Shell.Save}"/></StackPanel></Button>
                 <Separator Width="8"/>
-                <Button Click="Start_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Play"/><TextBlock Text="{DynamicResource Shell.Run}"/></StackPanel></Button>
+                <Button Click="TimelineRun_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Play"/><TextBlock Text="{DynamicResource Shell.Run}"/></StackPanel></Button>
                 <Button Click="Pause_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Pause"/><TextBlock Text="{DynamicResource Shell.Pause}"/></StackPanel></Button>
                 <Button Click="Reset_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Reset"/><TextBlock Text="{DynamicResource Shell.Reset}"/></StackPanel></Button>
                 <Button Click="ApplyChanges_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Apply"/><TextBlock Text="{DynamicResource Shell.Apply}"/></StackPanel></Button>
@@ -134,22 +134,56 @@
                 </Grid>
             </Border>
         </Grid>
-        <Border Grid.Row="3" Background="{DynamicResource WorkspacePane}" Padding="8,5" BorderBrush="{DynamicResource WorkspaceBorder}" BorderThickness="0,1,0,0">
-            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*,Auto">
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Button ToolTip.Tip="{DynamicResource Shell.Firstframe}" AutomationProperties.Name="{DynamicResource Shell.Firstframe}" Tag="First" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="First"/></StackPanel></Button>
-                    <Button ToolTip.Tip="{DynamicResource Shell.Previousframe}" AutomationProperties.Name="{DynamicResource Shell.Previousframe}" Tag="Previous" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Previous"/></StackPanel></Button>
-                    <Button x:Name="PlayButton" Click="PlayPause_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Play"/><TextBlock Text="{DynamicResource Shell.Play}"/></StackPanel></Button>
-                    <Button ToolTip.Tip="{DynamicResource Shell.Nextframe}" AutomationProperties.Name="{DynamicResource Shell.Nextframe}" Tag="Next" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Next"/></StackPanel></Button>
-                    <Button ToolTip.Tip="{DynamicResource Shell.Lastframe}" AutomationProperties.Name="{DynamicResource Shell.Lastframe}" Tag="Last" Click="Seek_Click"><StackPanel Orientation="Horizontal" Spacing="6"><controls:IconView Drawing="Last"/></StackPanel></Button>
-                </StackPanel>
-                <Slider x:Name="TimelineSlider" AutomationProperties.Name="{DynamicResource Shell.Frametimeline}" Grid.Column="1" Minimum="0" Maximum="0" Value="0" Margin="12,0" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Timeline_Changed"/>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                    <CheckBox x:Name="LoopPlayback" Content="{DynamicResource Shell.Loop}"/>
-                    <TextBlock Text="{DynamicResource Shell.Speed}" VerticalAlignment="Center"/>
-                    <NumericUpDown x:Name="PlaybackSpeed" AutomationProperties.Name="{DynamicResource Shell.Playbackspeed}" Value="1" Minimum="0.1" Maximum="8" Increment="0.1" Width="85"/>
-                </StackPanel>
-                <TextBlock x:Name="FrameText" Grid.Row="1" Grid.ColumnSpan="3" Text="{DynamicResource Shell.Frame0}" Foreground="{DynamicResource WorkspaceMuted}" Margin="0,3,0,0"/>
+        <Border Grid.Row="3" Background="{DynamicResource WorkspacePane}" Padding="8,4" BorderBrush="{DynamicResource WorkspaceBorder}" BorderThickness="0,1,0,0">
+            <Grid RowDefinitions="Auto,Auto">
+                <controls:TimelineBar x:Name="TimelineSlider" Minimum="0" Maximum="0" Value="0"
+                                      ToolTip.Tip="{DynamicResource TipPreviewTimeline}" ValueChanged="Timeline_Changed"/>
+                <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                    <DockPanel MinWidth="830" LastChildFill="True" Margin="0,2,0,0">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <TextBlock Text="{DynamicResource LabelPreviewSpeed}" VerticalAlignment="Center" Margin="0,0,3,0"/>
+                            <NumericUpDown x:Name="PlaybackSpeed" FormatString="0.##" Value="1" Minimum="0.1" Maximum="8" Increment="0.1" Width="65"
+                                           ToolTip.Tip="{DynamicResource TipPreviewSpeed}" AutomationProperties.Name="{DynamicResource TipPreviewSpeed}"
+                                           ValueChanged="PlaybackSpeed_Changed"/>
+                            <Button x:Name="SpeedPresetButton" Classes="transport" Content="▾" ToolTip.Tip="{DynamicResource TipPreviewSpeed}" AutomationProperties.Name="{DynamicResource TipPreviewSpeed}">
+                                <Button.Flyout><Flyout><StackPanel Spacing="2">
+                                    <Button Content="0.25×" Tag="0.25" Click="PlaybackPreset_Click"/>
+                                    <Button Content="0.5×" Tag="0.5" Click="PlaybackPreset_Click"/>
+                                    <Button Content="1×" Tag="1" Click="PlaybackPreset_Click"/>
+                                    <Button Content="1.5×" Tag="1.5" Click="PlaybackPreset_Click"/>
+                                    <Button Content="2×" Tag="2" Click="PlaybackPreset_Click"/>
+                                    <Button Content="4×" Tag="4" Click="PlaybackPreset_Click"/>
+                                    <Button Content="8×" Tag="8" Click="PlaybackPreset_Click"/>
+                                </StackPanel></Flyout></Button.Flyout>
+                            </Button>
+                            <ToggleButton x:Name="ShowFieldButton" Tag="Field" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewShowField}" AutomationProperties.Name="{DynamicResource TipPreviewShowField}" Click="TogglePreview_Click"><controls:IconView Drawing="Field"/></ToggleButton>
+                            <ToggleButton x:Name="ShowIntensityButton" Tag="Intensity" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewShowIntensity}" AutomationProperties.Name="{DynamicResource TipPreviewShowIntensity}" Click="TogglePreview_Click"><controls:IconView Drawing="Intensity"/></ToggleButton>
+                            <ToggleButton x:Name="SideBySideButton" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewSideBySide}" AutomationProperties.Name="{DynamicResource TipPreviewSideBySide}" Click="SideBySide_Click"><controls:IconView Drawing="SideBySide"/></ToggleButton>
+                            <ToggleButton x:Name="StackedButton" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewStacked}" AutomationProperties.Name="{DynamicResource TipPreviewStacked}" Click="StackedPreviews_Click"><controls:IconView Drawing="Stacked"/></ToggleButton>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                            <Button x:Name="TimelineRunButton" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewRun}" AutomationProperties.Name="{DynamicResource TipPreviewRun}" Click="TimelineRun_Click"><controls:IconView Drawing="RunSimulation"/></Button>
+                            <Button x:Name="TimelinePauseRunButton" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewPauseRun}" AutomationProperties.Name="{DynamicResource TipPreviewPauseRun}" Click="Pause_Click"><controls:IconView Drawing="PauseSimulation"/></Button>
+                            <Border Width="1" Background="{DynamicResource WorkspaceBorder}" Margin="5,3"/>
+                            <Button x:Name="PlayButton" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewPlay}" AutomationProperties.Name="{DynamicResource TipPreviewPlay}" Click="Play_Click"><controls:IconView Drawing="Play"/></Button>
+                            <Button x:Name="PausePlaybackButton" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewPause}" AutomationProperties.Name="{DynamicResource TipPreviewPause}" Click="PausePlayback_Click"><controls:IconView Drawing="Pause"/></Button>
+                            <Button x:Name="StepBackButton" Tag="Previous" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewStepBack}" AutomationProperties.Name="{DynamicResource TipPreviewStepBack}" Click="Seek_Click"><controls:IconView Drawing="StepBack"/></Button>
+                            <Button x:Name="StepForwardButton" Tag="Next" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewStepForward}" AutomationProperties.Name="{DynamicResource TipPreviewStepForward}" Click="Seek_Click"><controls:IconView Drawing="StepForward"/></Button>
+                            <Border Width="1" Background="{DynamicResource WorkspaceBorder}" Margin="5,3"/>
+                            <Button x:Name="SetInButton" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewSetIn}" AutomationProperties.Name="{DynamicResource TipPreviewSetIn}" Click="MarkIn_Click"><controls:IconView Drawing="SetIn"/></Button>
+                            <Button x:Name="SetOutButton" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewSetOut}" AutomationProperties.Name="{DynamicResource TipPreviewSetOut}" Click="MarkOut_Click"><controls:IconView Drawing="SetOut"/></Button>
+                            <Button x:Name="ClearRangeButton" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewClearRange}" AutomationProperties.Name="{DynamicResource TipPreviewClearRange}" Click="ClearRange_Click"><controls:IconView Drawing="ClearRange"/></Button>
+                            <ToggleButton x:Name="LoopPlayback" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewLoop}" AutomationProperties.Name="{DynamicResource TipPreviewLoop}" Click="LoopPlayback_Click"><controls:IconView Drawing="Loop"/></ToggleButton>
+                            <ToggleButton x:Name="LiveFollow" Classes="transport" ToolTip.Tip="{DynamicResource TipPreviewLive}" AutomationProperties.Name="{DynamicResource TipPreviewLive}" Click="LiveFollow_Click"><controls:IconView Drawing="Live"/></ToggleButton>
+                            <Border Width="1" Background="{DynamicResource WorkspaceBorder}" Margin="5,3"/>
+                            <NumericUpDown x:Name="FramePosition" Value="0" Minimum="0" Maximum="0" Increment="1" Width="70" FormatString="0" ParsingNumberStyle="Integer"
+                                           ToolTip.Tip="{DynamicResource TipPreviewFrame}" AutomationProperties.Name="{DynamicResource TipPreviewFrame}" ValueChanged="FramePosition_Changed"/>
+                            <TextBlock x:Name="FramePositionText" Text="/ 0" VerticalAlignment="Center" Margin="3,0,8,0"/>
+                            <TextBlock x:Name="StepText" Text="step 0" VerticalAlignment="Center" Foreground="{DynamicResource WorkspaceMuted}" ToolTip.Tip="{DynamicResource TipPreviewStep}"/>
+                            <TextBlock x:Name="FrameText" IsVisible="False"/>
+                        </StackPanel>
+                    </DockPanel>
+                </ScrollViewer>
             </Grid>
         </Border>
         <Border Grid.Row="4" Background="#007ACC" Padding="8,4">

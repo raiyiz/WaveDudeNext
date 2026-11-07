@@ -409,7 +409,7 @@ public partial class MainWindow : Window
     private void Start_Click(object? sender,
         global::Avalonia.Interactivity.RoutedEventArgs e)
     {
-        StopPlayback(); _followSimulation = true;
+        StopPlayback(); _simulationPaused = false; _followSimulation = true;
         if (_hasPendingChanges) ApplyPendingChanges();
         if (_step >= _runSteps)
         {
@@ -420,13 +420,17 @@ public partial class MainWindow : Window
             RenderFrame();
         }
         _timer.Start();
+        UpdateTimelineControls();
     }
 
     private void Pause_Click(object? sender,
         global::Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (!_timer.IsEnabled && _simulationPaused) { Start_Click(sender, e); return; }
+        _simulationPaused = _timer.IsEnabled;
         _timer.Stop();
         _stepCancel?.Cancel();
+        UpdateTimelineControls();
     }
 
     private void Reset_Click(object? sender,

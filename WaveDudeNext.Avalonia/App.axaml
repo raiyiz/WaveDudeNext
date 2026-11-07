@@ -6,11 +6,13 @@
 
     <Application.Resources>
         <ResourceDictionary>
+            <x:Double x:Key="ControlContentThemeFontSize">13</x:Double>
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Dark">
                     <SolidColorBrush x:Key="WindowForeground" Color="#F1F1F1"/>
                     <SolidColorBrush x:Key="GrayText" Color="#999999"/>
                     <SolidColorBrush x:Key="ControlBorder" Color="#3F3F46"/>
+                    <SolidColorBrush x:Key="FormSectionDivider" Color="#4A4A50"/>
                     <SolidColorBrush x:Key="ToolWindowBackground" Color="#252526"/>
                     <SolidColorBrush x:Key="TextBoxBackground" Color="#333337"/>
                     <SolidColorBrush x:Key="TextBoxBorder" Color="#3F3F46"/>
@@ -19,6 +21,7 @@
                     <SolidColorBrush x:Key="WindowForeground" Color="#202020"/>
                     <SolidColorBrush x:Key="GrayText" Color="#666666"/>
                     <SolidColorBrush x:Key="ControlBorder" Color="#BFBFBF"/>
+                    <SolidColorBrush x:Key="FormSectionDivider" Color="#CBCBD0"/>
                     <SolidColorBrush x:Key="ToolWindowBackground" Color="#FAFAFA"/>
                     <SolidColorBrush x:Key="TextBoxBackground" Color="#FFFFFF"/>
                     <SolidColorBrush x:Key="TextBoxBorder" Color="#BFBFBF"/>
@@ -33,5 +36,12 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="/Styles/Editors.axaml"/>
+        <Style Selector="Button.transport, ToggleButton.transport">
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="MinHeight" Value="0"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="CornerRadius" Value="1"/>
+        </Style>
     </Application.Styles>
 </Application>

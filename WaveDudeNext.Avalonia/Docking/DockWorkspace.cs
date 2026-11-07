@@ -74,6 +74,22 @@ public sealed partial class DockWorkspace : Grid
     }
     public bool Contains(string id) => _panes.ContainsKey(id);
     public bool IsPaneVisible(string id) => AllRoots().Any(root => FindGroup(root, id) is not null);
+    public bool? AreStacked(string first, string second)
+    {
+        foreach (var root in AllRoots())
+        {
+            var a = FindGroup(root, first); var b = FindGroup(root, second);
+            if (a is null || b is null || ReferenceEquals(a, b)) continue;
+            var node = root!;
+            while (node.IsSplit)
+            {
+                if (HasNode(node.First, a) && HasNode(node.First, b)) node = node.First!;
+                else if (HasNode(node.Second, a) && HasNode(node.Second, b)) node = node.Second!;
+                else return node.Vertical;
+            }
+        }
+        return null;
+    }
     public void Show(string id)
     {
         if (!_panes.ContainsKey(id)) return;

@@ -47,6 +47,7 @@ public partial class MainWindow
         public Controls.PreviewOverlays FieldOverlays { get; set; } = new();
         public Controls.PreviewOverlays IntensityOverlays { get; set; } = new();
         public string Quality { get; set; } = "Full";
+        public bool PreviewStacked { get; set; }
         public bool TabbedPreviews { get; set; }
         public string Theme { get; set; } = "Dark";
         public string Language { get; set; } = "EN";

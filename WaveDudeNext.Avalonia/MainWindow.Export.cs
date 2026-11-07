@@ -37,12 +37,17 @@ public partial class MainWindow
     private void MarkIn_Click(object? sender, RoutedEventArgs e) { _playIn = _viewFrame; if (_playOut < _playIn) _playOut = null; UpdateRange(); }
     private void MarkOut_Click(object? sender, RoutedEventArgs e) { _playOut = _viewFrame; if (_playIn > _playOut) _playIn = 0; UpdateRange(); }
     private void ClearRange_Click(object? sender, RoutedEventArgs e) { _playIn = 0; _playOut = null; UpdateRange(); }
-    private void UpdateRange() => StatusText.Text = $"Playback/export range: frame {_playIn + 1} to {(_playOut is { } last ? (last + 1).ToString() : "end")}";
+    private void UpdateRange()
+    {
+        UpdateTimelineControls();
+        StatusText.Text = UiText.Format("Playback/export range: frame {0} to {1}", _playIn, _playOut is { } last ? last.ToString() : UiText.Text("end"));
+    }
     private void CancelExport_Click(object? sender, RoutedEventArgs e) => _exportJob?.Cancel();
     private async void ExportRecording_Click(object? sender, RoutedEventArgs e)
     {
         if (_exportJob is { IsActive: true }) { StatusText.Text = UiText.Text("An export is already running."); return; }
         if (_frames is not { Count: > 0 } frames || _loadedProject is not { } project) return;
+        if (_playIn > TimelineLastFrame) { StatusText.Text = UiText.Text("The selected range has not been computed yet."); return; }
         _timer.Stop(); _editTimer.Stop(); StopPlayback();
         await _backgroundTask;
         var format = new ComboBox { ItemsSource = ExportFormats.All.Where(f => ExportFormats.IsAvailable(f) || f == ExportFormat.Mp4 && Rendering.FfmpegSink.IsAvailable).ToArray(), SelectedItem = ExportFormat.Png };
@@ -56,7 +61,7 @@ public partial class MainWindow
         {
             new TextBlock { Text = UiText.Text("Format (PNG/JPEG/OpenEXR write an image sequence)") }, format,
             new TextBlock { Text = UiText.Text("Layer") }, layer, new TextBlock { Text = UiText.Text("Quality (JPEG/MPEG)") }, quality,
-            new TextBlock { Text = UiText.Format("Frames {0}–{1}. OpenEXR: Exr stores I; ExrRoot stores √I.", _playIn + 1, Math.Min(_playOut ?? TimelineLastFrame, TimelineLastFrame) + 1), TextWrapping = global::Avalonia.Media.TextWrapping.Wrap },
+            new TextBlock { Text = UiText.Format("Frames {0}–{1}. OpenEXR: Exr stores I; ExrRoot stores √I.", _playIn, Math.Min(_playOut ?? TimelineLastFrame, TimelineLastFrame)), TextWrapping = global::Avalonia.Media.TextWrapping.Wrap },
             new StackPanel { Orientation = global::Avalonia.Layout.Orientation.Horizontal, Spacing = 8, Children = { export, cancel } }
         } };
         if (!await ShowWorkspaceDialog<bool>(dialog) || !ReferenceEquals(_frames, frames)) return;

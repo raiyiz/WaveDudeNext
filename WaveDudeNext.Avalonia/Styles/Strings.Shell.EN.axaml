@@ -173,4 +173,6 @@
     <x:String x:Key="Shell.Hidethisgraph">Hide this graph</x:String>
     <x:String x:Key="Shell.Hidethisdrawing">Hide this drawing</x:String>
     <x:String x:Key="Shell.Showgraphoversimulation">Show graph over simulation</x:String>
+    <x:String x:Key="Shell.step0">step {0}</x:String>
+    <x:String x:Key="Shell.Theselectedrangehasnotbeencomputedyet">The selected range has not been computed yet.</x:String>
 </ResourceDictionary>

@@ -105,6 +105,7 @@ public partial class MainWindow
         }
         AddHandler(KeyDownEvent, OnWorkspaceKeyDown, RoutingStrategies.Bubble);
         InitializeDesktop();
+        InitializeTimeline();
         InitializeDrop();
         FieldCanvas.ViewChanged += () => FieldImage.RenderTransform = new global::Avalonia.Media.MatrixTransform(FieldCanvas.ImageTransform);
         IntensityCanvas.ViewChanged += () => IntensityImage.RenderTransform = new global::Avalonia.Media.MatrixTransform(IntensityCanvas.ImageTransform);
@@ -274,11 +275,13 @@ public partial class MainWindow
         FieldCanvas.Layer = ProbeLayer.Field;
         IntensityCanvas.Layer = ProbeLayer.Intensity;
         _lastCapturedStep = -1;
-        _capturedSteps.Clear(); _followSimulation = true; _probeFramesAreFull = false;
+        _capturedSteps.Clear(); _simulationPaused = false; _followSimulation = true; _probeFramesAreFull = false;
         _viewFrame = 0;
         _fieldLut = _intensityLut = null;
         _settingTimeline = true;
-        TimelineSlider.Maximum = 0;
+        TimelineSlider.Maximum = PlannedLastFrame;
+        TimelineSlider.Available = 0;
+        TimelineSlider.RangeStart = 0; TimelineSlider.RangeEnd = -1;
         TimelineSlider.Value = 0;
         _settingTimeline = false;
     }
@@ -297,7 +300,7 @@ public partial class MainWindow
         _lastCapturedStep = _step;
         _capturedSteps.Add(_step);
         _settingTimeline = true;
-        TimelineSlider.Maximum = TimelineLastFrame;
+        TimelineSlider.Available = TimelineLastFrame;
         _settingTimeline = false;
     }
     private void RenderFrame()
@@ -323,7 +326,8 @@ public partial class MainWindow
         _settingTimeline = true;
         TimelineSlider.Value = _viewFrame;
         _settingTimeline = false;
-        FrameText.Text = $"Frame {_viewFrame + 1} / {TimelineLastFrame + 1}  ·  stored {frames.Count}  ·  {frames.Width} × {frames.Height}, {(_quality.Format == WaveDudeNext.Engine.FrameFormat.Index ? "8-bit" : "16-bit")}  ·  RAM {frames.FramesInMemory}, disk {frames.FramesOnDisk}{(frames.RamFrames < frames.Capacity ? " (disk cache required)" : "")}  ·  Step {TimelineStep(_viewFrame)}";
+        UpdateTimelineControls();
+        FrameText.Text = $"Frame {_viewFrame} / {PlannedLastFrame}  ·  stored {frames.Count}  ·  {frames.Width} × {frames.Height}, {(_quality.Format == WaveDudeNext.Engine.FrameFormat.Index ? "8-bit" : "16-bit")}  ·  RAM {frames.FramesInMemory}, disk {frames.FramesOnDisk}{(frames.RamFrames < frames.Capacity ? " (disk cache required)" : "")}  ·  Step {TimelineStep(_viewFrame)}";
     }
     private void DrawStoredPlane(WriteableBitmap bitmap, FrameLayer layer, DisplayLayer display, ref ColorLut? lut)
     {
@@ -349,8 +353,7 @@ public partial class MainWindow
     private void Timeline_Changed(object? sender, RangeBaseValueChangedEventArgs e)
     {
         if (_settingTimeline || _frames is null) return;
-        _timer.Stop(); _followSimulation = false;
-        ShowStoredFrame((int)Math.Round(e.NewValue));
+        SeekFrame((int)Math.Round(e.NewValue));
     }
     private void Seek_Click(object? sender, RoutedEventArgs e)
     {
@@ -366,18 +369,18 @@ public partial class MainWindow
     private void PlayPause_Click(object? sender, RoutedEventArgs e)
     {
         if (_playbackTimer.IsEnabled) { StopPlayback(); return; }
-        if (_frames is not { Count: > 1 }) return;
+        if (_frames is not { Count: > 1 } || _playIn > TimelineLastFrame) return;
         _timer.Stop(); _followSimulation = false;
         if (_viewFrame < _playIn || _viewFrame >= Math.Min(_playOut ?? TimelineLastFrame, TimelineLastFrame)) ShowStoredFrame(_playIn);
         double fps = _loadedProject?.Display.Video.Fps ?? 30;
         _playbackTimer.Interval = TimeSpan.FromSeconds(1 / (fps * (double)(PlaybackSpeed.Value ?? 1)));
         _playbackTimer.Start();
-        PlayButton.Content = Controls.IconView.Label("Pause", UiText.Text("Pause"));
+        UpdateTimelineControls();
     }
     private void StopPlayback()
     {
         _playbackTimer?.Stop();
-        if (PlayButton is not null) PlayButton.Content = Controls.IconView.Label("Play", UiText.Text("Play"));
+        if (PlayButton is not null) UpdateTimelineControls();
     }
     private async void ExportFrame_Click(object? sender, RoutedEventArgs e)
     {
@@ -478,7 +481,7 @@ public partial class MainWindow
     {
         bool ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
         // Native text editing keeps its own Undo, Delete and clipboard shortcuts.
-        bool editing = e.Source is TextBox || (e.Source as Control)?.FindAncestorOfType<TextBox>() is not null;
+        bool editing = e.Source is TextBox or NumericUpDown or ComboBox || (e.Source as Control)?.FindAncestorOfType<TextBox>() is not null || (e.Source as Control)?.FindAncestorOfType<ComboBox>() is not null;
         if (ctrl && e.Key == Key.S)
         {
             if (e.KeyModifiers.HasFlag(KeyModifiers.Shift)) SaveProjectAs_Click(this, new RoutedEventArgs());
@@ -494,9 +497,10 @@ public partial class MainWindow
         else if (e.Key == Key.F1) Manual_Click(this, new());
         else if (!editing && ctrl && e.Key == Key.D) Duplicate_Click(this, new RoutedEventArgs());
         else if (!editing && e.Key == Key.Delete) Delete_Click(this, new RoutedEventArgs());
-        else if (e.Key == Key.F5) Start_Click(this, new RoutedEventArgs());
+        else if (e.Key == Key.F5) TimelineRun_Click(this, new RoutedEventArgs());
         else if (e.Key == Key.F6) Pause_Click(this, new RoutedEventArgs());
         else if (e.Key == Key.F7) PlayPause_Click(this, new RoutedEventArgs());
+        else if (!editing && !e.Handled && HandleTimelineShortcut(e)) { }
         else return;
         e.Handled = true;
     }

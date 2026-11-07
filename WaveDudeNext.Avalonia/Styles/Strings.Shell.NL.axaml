@@ -173,4 +173,6 @@
     <x:String x:Key="Shell.Hidethisgraph">Deze grafiek verbergen</x:String>
     <x:String x:Key="Shell.Hidethisdrawing">Deze tekening verbergen</x:String>
     <x:String x:Key="Shell.Showgraphoversimulation">Grafiek op de simulatie tonen</x:String>
+    <x:String x:Key="Shell.step0">stap {0}</x:String>
+    <x:String x:Key="Shell.Theselectedrangehasnotbeencomputedyet">Het geselecteerde bereik is nog niet berekend.</x:String>
 </ResourceDictionary>
