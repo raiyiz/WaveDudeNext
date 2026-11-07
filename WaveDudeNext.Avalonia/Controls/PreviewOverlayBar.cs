@@ -22,6 +22,7 @@ using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Layout;
+using Avalonia.Data;
 using Avalonia.Media;
 using WaveDudeNext.Model;
 
@@ -35,9 +36,11 @@ public sealed class PreviewOverlayBar : UserControl
     private readonly Action _changed;
     private readonly ToggleButton _drawings;
     private readonly Button _options;
+    private readonly NumericUpDown _brightness;
+    private readonly Button _autoBrightness;
     private bool _synchronizing;
     private readonly Flyout _flyout = new();
-    public PreviewOverlayBar(SceneCanvas canvas, Func<Project?> project, Action changed, string id)
+    public PreviewOverlayBar(SceneCanvas canvas, Func<Project?> project, Action changed, string id, Action autoBrightness)
     {
         Background = Application.Current?.TryFindResource("WorkspaceHeader", out var brush) == true && brush is IBrush color ? color : Brushes.DimGray;
         _canvas = canvas; _project = project; _changed = changed;
@@ -50,10 +53,38 @@ public sealed class PreviewOverlayBar : UserControl
         AutomationProperties.SetAutomationId(_options, id + "OverlayOptions");
         _options.Flyout = _flyout;
         _flyout.Opening += (_, _) => BuildOptions();
-        Content = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(4, 3), Children = { _drawings, _options } };
+        var label = new TextBlock { VerticalAlignment = VerticalAlignment.Center };
+        label.Bind(TextBlock.TextProperty, this.GetResourceObservable("Label.DisplayLayer.Brightness"));
+        _brightness = new NumericUpDown { Width = 92, Minimum = 0.0001m, Maximum = 100000m, Increment = 1, FormatString = "0.####", Padding = new Thickness(4, 1), MinHeight = 24 };
+        _brightness.Bind(NumericUpDown.ValueProperty, new Binding("Brightness") { Mode = BindingMode.TwoWay });
+        _brightness.Bind(ToolTip.TipProperty, this.GetResourceObservable("Hint.DisplayLayer.Brightness"));
+        _brightness.Bind(AutomationProperties.NameProperty, this.GetResourceObservable("Label.DisplayLayer.Brightness"));
+        AutomationProperties.SetLabeledBy(_brightness, label);
+        AutomationProperties.SetAutomationId(_brightness, id + "Brightness");
+        _autoBrightness = new Button { Padding = new Thickness(6, 2) };
+        _autoBrightness.Bind(ContentControl.ContentProperty, this.GetResourceObservable("ButtonAutoBrightness"));
+        _autoBrightness.Bind(ToolTip.TipProperty, this.GetResourceObservable("TipAutoBrightness"));
+        _autoBrightness.Bind(AutomationProperties.NameProperty, this.GetResourceObservable("MenuAutoBrightness"));
+        AutomationProperties.SetAutomationId(_autoBrightness, id + "AutoBrightness");
+        _autoBrightness.Click += (_, _) => autoBrightness();
+        var brightnessGroup = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = new Thickness(4, 2), Children = { label, _brightness, _autoBrightness } };
+        Content = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(4, 3), Children =
+        {
+            new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 2, 6, 2), Children = { _drawings, _options } }, brightnessGroup
+        } };
+        SynchronizeState();
     }
     public void SynchronizeState()
-    { _synchronizing = true; try { _drawings.IsChecked = _canvas.Overlays.Drawings; } finally { _synchronizing = false; } }
+    {
+        _synchronizing = true;
+        try
+        {
+            _drawings.IsChecked = _canvas.Overlays.Drawings;
+            _brightness.DataContext = _canvas.Layer == ProbeLayer.Field ? _project()?.Display.Field : _project()?.Display.Intensity;
+            _brightness.IsEnabled = _autoBrightness.IsEnabled = _project() is not null;
+        }
+        finally { _synchronizing = false; }
+    }
     public void RefreshLanguage()
     { _drawings.Content = UiText.Text("Drawings"); _options.Content = UiText.Text("Overlay options…"); AutomationProperties.SetName(_drawings, UiText.Text("Show preview drawings")); ToolTip.SetTip(_drawings, UiText.Text("Hide or show every line, label, marker and graph over this simulation.")); }
     private void BuildOptions()

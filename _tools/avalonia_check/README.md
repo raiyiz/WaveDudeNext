@@ -20,3 +20,5 @@ It also checks overlay hide/show rendering (including selected graphics), catego
 This mode also fails on binding warnings/errors and writes `/tmp/wavedude-linux-workspace.png`. When `xdotool` is installed, this mode also sends real mouse drags under Xvfb to test pane tabbing, floating, redocking, probe-box movement/resizing and cancellation, plus numbered-ruler scrubbing and both range brackets. It checks exact-frame entry, playback range/looping, live-follow, speed presets, simulation restart/pause/resume, accessible seeking and picture layout controls. It does not automate native file-picker dialogs or a live screen reader.
 
 Project-pane checks exercise toolbar and folder additions, all Part menu entries, row/toolbar reordering, boundary arrows, row removal and undo, and probe activity checkboxes. A second screenshot is saved to `/tmp/wavedude-linux-project-tree.png`.
+
+Brightness checks cover independent pane gains, synchronization with Display settings, WPF percentile fits for both layers, retained half-precision recordings, and the unclipped fit fallback for indexed previews.

@@ -287,6 +287,27 @@ sealed class WorkspaceCheckApp : App
                 var traces = (System.Collections.Generic.Dictionary<Probe, WaveDudeNext.Probes.ProbeTrace>)Field("_probeTraces")!;
                 Check(traces.Count == 1 && traces.Values.Single().Series.Count == 10, "Probes record a sample for each simulation step");
                 Check(frames.Count == 6, "Timeline records initial and simulated frames");
+                NumericUpDown BrightnessBox(string id) => window.GetVisualDescendants().OfType<NumericUpDown>().Single(input => global::Avalonia.Automation.AutomationProperties.GetAutomationId(input) == id + "Brightness");
+                Button BrightnessAuto(string id) => window.GetVisualDescendants().OfType<Button>().Single(input => global::Avalonia.Automation.AutomationProperties.GetAutomationId(input) == id + "AutoBrightness");
+                double oldFieldBrightness = project.Display.Field.Brightness, oldIntensityBrightness = project.Display.Intensity.Brightness;
+                BrightnessBox("Field").Value = 12.5m;
+                Check(project.Display.Field.Brightness == 12.5 && project.Display.Intensity.Brightness == oldIntensityBrightness,
+                    "Field pane brightness edits only the field gain");
+                project.Display.Intensity.Brightness = 7.25;
+                Check(BrightnessBox("Intensity").Value == 7.25m && ReferenceEquals(frames, Field("_frames")) && frames.Count == 6,
+                    "Pane brightness synchronizes with display settings and preserves half-precision recordings");
+                foreach (var brightnessPlane in new[] { FrameLayer.Field, FrameLayer.Intensity })
+                {
+                    string brightnessId = brightnessPlane == FrameLayer.Field ? "Field" : "Intensity";
+                    var brightnessSamples = new Half[frames.Width * frames.Height];
+                    frames.CopyLayer(frames.Count - 1, brightnessPlane, brightnessSamples);
+                    var gain = brightnessPlane == FrameLayer.Field ? project.Display.Field : project.Display.Intensity;
+                    double expectedFit = WaveDudeNext.Rendering.BrightnessFit.For(brightnessSamples, ((IFrameSource)frames).KindOf(brightnessPlane)) ?? gain.Brightness;
+                    BrightnessAuto(brightnessId).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    Check(gain.Brightness == expectedFit, brightnessId + " Auto brightness uses the WPF percentile fit");
+                }
+                project.Display.Field.Brightness = oldFieldBrightness;
+                project.Display.Intensity.Brightness = oldIntensityBrightness;
                 window.FindControl<TimelineBar>("TimelineSlider")!.Value = 2;
                 Check((int)Field("_viewFrame")! == 2, "Timeline scrubs to an earlier stored frame");
                 Check(window.FindControl<MenuItem>("ExamplesMenu")!.Items.Count > 0, "Bundled examples are available");
@@ -639,6 +660,18 @@ sealed class WorkspaceCheckApp : App
                     projectShot.Render(window);
                     projectShot.Save("/tmp/wavedude-linux-project-tree.png", global::Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
                 }
+                Invoke("PreviewQuality_Click", new MenuItem { Tag = "Balanced" });
+                for (int step = 0; step < 8; step++) Invoke("UpdateSimulation");
+                var indexedFrames = (FrameStore)Field("_frames")!;
+                int indexedCount = indexedFrames.Count;
+                BrightnessBox("Field").Value = 0.0001m;
+                BrightnessAuto("Field").RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                var brightnessDeadline = DateTime.UtcNow.AddSeconds(20);
+                while ((bool)Field("_fittingBrightness")! && DateTime.UtcNow < brightnessDeadline) await Task.Delay(25);
+                Check(!(bool)Field("_fittingBrightness")! && project.Display.Field.Brightness > 0.0001,
+                    "Auto brightness computes unclipped samples for indexed previews");
+                Check(ReferenceEquals(indexedFrames, Field("_frames")) && indexedFrames.Count == indexedCount,
+                    "Indexed Auto fit preserves the active frame store while computing");
                 Check(EditorLog.Errors.Count == 0, "Workspace has no binding warnings or errors: " + string.Join("; ", EditorLog.Errors));
                 Console.WriteLine("Workspace smoke checks passed. Screenshot: /tmp/wavedude-linux-workspace.png");
                 typeof(MainWindow).GetField("_allowClose", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(window, true);

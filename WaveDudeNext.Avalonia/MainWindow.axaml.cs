@@ -284,6 +284,9 @@ public partial class MainWindow : Window
 		ProjectChange change)
 	{
         _fieldLut = _intensityLut = null;
+        foreach (var bar in _overlayBars) bar.SynchronizeState();
+        if (change.Item is DisplayLayer && change.Property == nameof(DisplayLayer.Brightness) && _frames is { Count: > 0 })
+            ShowStoredFrame(_viewFrame);
         if (change.Item is Probe && change.Property == nameof(Probe.Name)) SynchronizeProbeViewports();
         FieldCanvas.InvalidateVisual();
         IntensityCanvas.InvalidateVisual();

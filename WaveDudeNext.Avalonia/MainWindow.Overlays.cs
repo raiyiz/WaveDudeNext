@@ -30,7 +30,7 @@ public partial class MainWindow
         canvas.Overlays = settings;
         canvas.OverlayVisibilityChanged += RefreshOverlayVisibility;
         var grid = (Grid)host.Child!;
-        var bar = new PreviewOverlayBar(canvas, () => _loadedProject, RefreshOverlayVisibility, id);
+        var bar = new PreviewOverlayBar(canvas, () => _loadedProject, RefreshOverlayVisibility, id, () => AutoPreviewBrightness(canvas.Layer));
         grid.Children.RemoveAt(0); grid.Children.Insert(0, bar);
         _overlayBars.Add(bar);
     }

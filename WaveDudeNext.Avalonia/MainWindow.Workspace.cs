@@ -164,6 +164,7 @@ public partial class MainWindow
     {
         LoadSimulation(project, path is null ? null : Path.GetDirectoryName(path));
         _loadedProject = project;
+        foreach (var bar in _overlayBars) bar.SynchronizeState();
         _projectPath = path;
         if (path is not null) RememberProject(path);
         PropertiesEditor.Project = project;
@@ -333,6 +334,7 @@ public partial class MainWindow
     private void ShowStoredFrame(int frame)
     {
         if (_frames is not { Count: > 0 } frames || _previewProject is not { } project) return;
+        foreach (var bar in _overlayBars) bar.SynchronizeState();
         _viewFrame = Math.Clamp(frame, 0, TimelineLastFrame);
         FieldCanvas.Frame = IntensityCanvas.Frame = _probeFramesAreFull ? _viewFrame : StoredFrameForTimeline(_viewFrame);
         FieldCanvas.Step = IntensityCanvas.Step = TimelineStep(_viewFrame);
