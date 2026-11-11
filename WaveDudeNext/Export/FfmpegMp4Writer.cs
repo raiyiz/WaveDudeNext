@@ -218,6 +218,12 @@ public sealed class FfmpegMp4Writer : IFrameSink
 		try
 		{
 			_input.Dispose();
+		}
+		catch (IOException)
+		{
+		}
+		try
+		{
 			_process.WaitForExit();
 		}
 		catch (InvalidOperationException)

@@ -20,7 +20,7 @@ namespace WaveDudeNext.Export;
 /// <summary>The export formats, in the order of the Save dialog's filter: the videos first, then the sequences (the user's order, 2026-10-19).</summary>
 public enum ExportFormat
 {
-	/// <summary>An H.264 MP4 through the Media Foundation of Windows; the quality setting applies.</summary>
+	/// <summary>An H.264 MP4 through Media Foundation on Windows or FFmpeg with libx264 elsewhere; the quality setting applies.</summary>
 	Mp4,
 	/// <summary>An MPEG-1 program stream of I-pictures (<c>.mpg</c>); the quality setting and the nearest standard frame rate apply.</summary>
 	Mpeg1,

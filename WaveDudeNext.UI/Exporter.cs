@@ -412,7 +412,7 @@ public sealed class Exporter : ObservableObject
 				DisplayLayer settings = layer == FrameLayer.Field ? display.Field : display.Intensity;
 				ColorLut lut = ColorSchemeCatalog.Instance.LutFor(Project, settings.ColorScheme, settings.BlackLevel);
 				var exportLayer = new ExportLayer(layer, lut, (float)settings.Brightness, settings.OverlayInExport ? edges : null, settings.OverlayGain, decorator.For(layer));
-				// the sink is opened by the job on its thread (a Media Foundation writer must stay on one thread)
+				// the sink is opened by the job on its thread (Media Foundation is thread-affine; FFmpeg owns its input pipe there)
 				int width = run.Spec.Width;
 				int height = run.Spec.Height;
 				int fps = display.Video.Fps;

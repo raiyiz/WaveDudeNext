@@ -315,7 +315,7 @@ internal static class ExportChecks
 			}
 			else
 			{
-				Console.WriteLine("  skip mp4: Media Foundation not available");
+				Console.WriteLine("  skip Media Foundation MP4: the Windows encoder is not available");
 			}
 
 
