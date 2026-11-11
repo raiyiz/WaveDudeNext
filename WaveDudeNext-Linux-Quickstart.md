@@ -11,7 +11,7 @@ Project: <https://github.com/graealex/WaveDudeNext>
 On CachyOS, install the .NET 10 SDK and the common X11/Wayland desktop libraries:
 
 ```bash
-sudo pacman -Syu dotnet-sdk-10.0 xorg-xwayland libx11 libice libsm fontconfig mesa libinput gtk3
+sudo pacman -Syu dotnet-sdk-10.0 xorg-xwayland libx11 libice libsm fontconfig mesa libinput gtk3 ffmpeg
 ```
 
 Check that the SDK is available:
@@ -114,9 +114,25 @@ Get the app working first; GPU setup is a separate step. For acceleration, Linux
 
 You can inspect available OpenCL devices with `clinfo` after installing the appropriate OpenCL packages for your GPU. Package names vary by GPU vendor and driver.
 
-## 7. Export limitation
+## 7. MP4 export on Linux
 
-MP4 export in the shared code uses **Windows Media Foundation**, so that export path is not available natively on Linux. Other implemented formats include PNG/JPEG image sequences, OpenEXR, MPEG-1, AVI and MOV; availability and behaviour can depend on the current frontend/version.
+The Linux Avalonia frontend writes MP4 through **FFmpeg with the `libx264` H.264 encoder**. FFmpeg is an external program, not a NuGet dependency; WaveDude Next streams rendered BGRA frames to it directly, without creating a temporary image sequence.
+
+Install FFmpeg on CachyOS:
+
+```bash
+sudo pacman -S ffmpeg
+```
+
+Check that the installed FFmpeg build includes `libx264`:
+
+```bash
+ffmpeg -hide_banner -encoders | grep libx264
+```
+
+The command should list the `libx264` encoder. WaveDude Next finds `ffmpeg` through `PATH`; restart the app after installing it. If FFmpeg or `libx264` is unavailable, MP4 is reported as unavailable with a dependency message.
+
+On Windows, MP4 continues to use Windows Media Foundation. Other formats—including MPEG-1, AVI, MOV, PNG/JPEG sequences and OpenEXR—keep their existing in-process writers.
 
 ## 8. Troubleshooting
 

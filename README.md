@@ -22,7 +22,7 @@ Everything can be moved and shaped on the picture, by handles and levers, or set
 
 ## Export
 
-Videos are written as MP4, MPEG-1, AVI or QuickTime; frames as PNG or JPEG, in sequences or as single images; and OpenEXR files carry the raw values for NumPy, MATLAB, Octave or an EXR viewer such as [DJV](https://github.com/darbyjohnston/DJV). In and out points set the range, and probe graphs, probe markers and source markers can be drawn into the output. A probe's recorded values can be exported as CSV.
+Videos are written as H.264 MP4, MPEG-1, AVI or QuickTime; frames as PNG or JPEG, in sequences or as single images; and OpenEXR files carry the raw values for NumPy, MATLAB, Octave or an EXR viewer such as [DJV](https://github.com/darbyjohnston/DJV). MP4 uses Media Foundation on Windows and FFmpeg with `libx264` on Linux. In and out points set the range, and probe graphs, probe markers and source markers can be drawn into the output. A probe's recorded values can be exported as CSV.
 
 ## Speed
 
