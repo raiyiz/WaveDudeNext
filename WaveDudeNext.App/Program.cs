@@ -44,5 +44,9 @@ public static class Program
 	public static AppBuilder BuildAvaloniaApp()
 		=> AppBuilder.Configure<App>()
 			.UsePlatformDetect()
+			.With(new X11PlatformOptions
+			{
+				UseDBusFilePicker = false
+			})
 			.LogToTrace();
 }
