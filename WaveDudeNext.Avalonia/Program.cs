@@ -16,6 +16,12 @@ class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            // The D-Bus file picker can fail to show on some Linux/X11 desktop setups (including XWayland).
+            // Use Avalonia's GTK-backed picker instead.
+            .With(new X11PlatformOptions
+            {
+                UseDBusFilePicker = false
+            })
 #if DEBUG
             .WithDeveloperTools()
 #endif
