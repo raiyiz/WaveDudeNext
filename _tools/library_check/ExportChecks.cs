@@ -318,6 +318,43 @@ internal static class ExportChecks
 				Console.WriteLine("  skip mp4: Media Foundation not available");
 			}
 
+
+			// FFmpeg/libx264: raw BGRA frames streamed directly to an MP4, including odd-size edge padding
+			if (FfmpegMp4Writer.IsAvailable())
+			{
+				string ffmpegMp4Path = Path.Combine(folder, "seven-ffmpeg.mp4");
+				try
+				{
+					using (var mp4 = new FfmpegMp4Writer(ffmpegMp4Path, w, h, 30, 80))
+					{
+						foreach (int[] frame in frames)
+						{
+							mp4.Add(frame);
+						}
+						check(mp4.FrameCount == 7 && mp4.Crf is >= 14 and <= 35, "mp4 by ffmpeg: 7 frames sent, quality mapped to CRF " + mp4.Crf);
+					}
+					byte[] mp4Bytes = File.ReadAllBytes(ffmpegMp4Path);
+					check(mp4Bytes.Length > 100 && Encoding.ASCII.GetString(mp4Bytes, 4, 4) == "ftyp", "mp4 by ffmpeg: ftyp box, " + mp4Bytes.Length + " bytes");
+					if (Ffmpeg != null)
+					{
+						int encodedWidth = (w + 1) & ~1;
+						int encodedHeight = (h + 1) & ~1;
+						byte[]? rgb = Decode(ffmpegMp4Path, encodedWidth, encodedHeight, out int count);
+						int[] expected = PadEven(frames[0], w, h);
+						double psnr = rgb == null || count < 1 ? 0 : Psnr(rgb.AsSpan(0, encodedWidth * encodedHeight * 3), expected, encodedWidth, encodedHeight);
+						check(rgb != null && count == 7 && psnr > 25, "mp4 by ffmpeg: ffmpeg decodes 7 padded frames, first at " + psnr.ToString("0.0", CultureInfo.InvariantCulture) + " dB (> 25)" + (rgb == null ? "" : ", got " + count));
+					}
+				}
+				catch (Exception ex)
+				{
+					check(false, "mp4 by ffmpeg: " + ex.Message);
+				}
+			}
+			else
+			{
+				Console.WriteLine("  skip ffmpeg mp4: ffmpeg with libx264 not available");
+			}
+
 			// formats
 			check(ExportFormats.FromPath(@"C:\x\a.JPEG") == ExportFormat.Jpeg && ExportFormats.FromPath("a.mpeg") == ExportFormat.Mpeg1 && ExportFormats.FromPath("a.txt") == null, "formats: extensions map, unknown is null");
 			check(ExportFormats.SequenceFolder(@"C:\Temp\chosenname.png") == @"C:\Temp\chosenname", "formats: a sequence chosen as C:\\Temp\\chosenname.png goes to C:\\Temp\\chosenname");
@@ -571,8 +608,8 @@ internal static class ExportChecks
 		var unopenable = new ExportJob(store, 0, 1, [new ExportTarget(intensityLayer, "nowhere", () => throw new IOException("no such drive"))], null);
 		unopenable.Start();
 		check(unopenable.Completion.Wait(10000) && unopenable.State == ExportState.Failed && unopenable.Error is IOException && unopenable.FramesDone == 0, "job: a sink that cannot open fails the job with its error");
-		// an MP4 written by the job: the Media Foundation writer lives on the job's thread (it refused a caller's thread, 2026-10-14)
-		if (OperatingSystem.IsWindows() && ExportFormats.IsAvailable(ExportFormat.Mp4))
+		// an MP4 written by the job: the platform writer is created, fed and closed on the sink thread
+		if (ExportFormats.IsAvailable(ExportFormat.Mp4))
 		{
 			string mp4Path = Path.Combine(folder, "job.mp4");
 			var mp4Job = new ExportJob(store, 0, 9, [new ExportTarget(fieldLayer, mp4Path, () => ExportFormats.Open(ExportFormat.Mp4, mp4Path, 64, 48, 30, 70, 10))], null);
@@ -865,6 +902,29 @@ internal static class ExportChecks
 		pixels[w - 1] = unchecked((int)0xFF00FF00);
 		pixels[(h - 1) * w] = unchecked((int)0xFF0000FF);
 		return pixels;
+	}
+
+
+	private static int[] PadEven(int[] pixels, int width, int height)
+	{
+		int encodedWidth = (width + 1) & ~1;
+		int encodedHeight = (height + 1) & ~1;
+		if (encodedWidth == width && encodedHeight == height)
+		{
+			return pixels;
+		}
+		var padded = new int[encodedWidth * encodedHeight];
+		for (int y = 0; y < encodedHeight; y++)
+		{
+			ReadOnlySpan<int> row = pixels.AsSpan(Math.Min(y, height - 1) * width, width);
+			Span<int> target = padded.AsSpan(y * encodedWidth, encodedWidth);
+			row.CopyTo(target);
+			if (encodedWidth > width)
+			{
+				target[width] = row[^1];
+			}
+		}
+		return padded;
 	}
 
 	private static string? FindFfmpeg()
