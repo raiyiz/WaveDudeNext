@@ -322,8 +322,10 @@ public sealed class Exporter : ObservableObject
 		Logger.Debug("Export: {What} as {Format} to {Path}", still ? "the shown frame " + stillFrame : field && intensity ? "field and intensity" : field ? "field" : "intensity", format, chosen);
 		if (!ExportFormats.IsAvailable(format))
 		{
-			Logger.Error("MP4 export is not available: Media Foundation is missing on this computer (Windows N needs the Media Feature Pack)");
-			Failed?.Invoke(this, new ExportFailure("ExportError", null));
+			string dependency = OperatingSystem.IsWindows() ? "Media Foundation with an H.264 encoder" : "FFmpeg with the libx264 encoder on PATH";
+			var error = new NotSupportedException("MP4 export needs " + dependency + ".");
+			Logger.Error(error, "MP4 export is unavailable: {Dependency}", dependency);
+			Failed?.Invoke(this, new ExportFailure("ExportError", error));
 			return;
 		}
 		// the output paths: one per layer; "both" takes the chosen name without a layer suffix and appends its own

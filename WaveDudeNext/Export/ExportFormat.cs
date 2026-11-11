@@ -200,8 +200,8 @@ public static class ExportFormats
 	/// <summary>Whether the quality setting means anything to the format.</summary>
 	public static bool UsesQuality(ExportFormat format) => format is ExportFormat.Jpeg or ExportFormat.Mpeg1 or ExportFormat.Mp4;
 
-	/// <summary>Whether the format can be written here (MP4 needs Media Foundation).</summary>
-	public static bool IsAvailable(ExportFormat format) => format != ExportFormat.Mp4 || (OperatingSystem.IsWindows() && Mp4Writer.IsAvailable());
+	/// <summary>Whether the format can be written here (MP4 needs Media Foundation on Windows or FFmpeg with libx264 elsewhere).</summary>
+	public static bool IsAvailable(ExportFormat format) => format != ExportFormat.Mp4 || (OperatingSystem.IsWindows() ? Mp4Writer.IsAvailable() : FfmpegMp4Writer.IsAvailable());
 
 	/// <summary>
 	/// Where a sequence chosen as <c>C:\Temp\name.png</c> goes: the folder <c>C:\Temp\name</c>, holding
@@ -255,11 +255,9 @@ public static class ExportFormats
 			case ExportFormat.Avi:
 				return new AviWriter(path, width, height, fps, plannedFrames);
 			case ExportFormat.Mp4:
-				if (!OperatingSystem.IsWindows())
-				{
-					throw new NotSupportedException("MP4 export needs the Media Foundation of Windows.");
-				}
-				return new Mp4Writer(path, width, height, fps, quality);
+				return OperatingSystem.IsWindows()
+					? new Mp4Writer(path, width, height, fps, quality)
+					: new FfmpegMp4Writer(path, width, height, fps, quality);
 			case ExportFormat.Mov:
 				return new MovWriter(path, width, height, fps, plannedFrames);
 			case ExportFormat.MovPng:
